@@ -29,6 +29,76 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 
+def print_timeline(timeline_data: dict):
+    """Print account-wide metric timeline with ASCII chart."""
+    timeline = timeline_data.get("timeline", [])
+    summary = timeline_data.get("summary", {})
+
+    if not timeline:
+        print("No timeline data available")
+        return
+
+    print("\n" + "=" * 70)
+    print("📈 ACCOUNT METRICS TIMELINE (Last 30 Days)")
+    print("=" * 70)
+
+    # Week-over-week summary
+    cpm_change = summary.get("cpm_wow_change", 0)
+    roas_change = summary.get("roas_wow_change", 0)
+
+    cpm_icon = "🔴" if cpm_change > 20 else "🟡" if cpm_change > 10 else "🟢"
+    roas_icon = "🔴" if roas_change < -20 else "🟡" if roas_change < -10 else "🟢"
+
+    print(f"\n{cpm_icon} CPM: ${summary.get('avg_cpm_prev_week', 0):.0f} → ${summary.get('avg_cpm_last_week', 0):.0f} ({cpm_change:+.0f}% WoW)")
+    print(f"{roas_icon} ROAS: {summary.get('avg_roas_prev_week', 0):.2f} → {summary.get('avg_roas_last_week', 0):.2f} ({roas_change:+.0f}% WoW)")
+
+    # ASCII CPM chart - show last 21 days for readability
+    recent = timeline[-21:] if len(timeline) >= 21 else timeline
+
+    if not recent:
+        return
+
+    # Get CPM values for chart
+    cpms = [d["cpm"] for d in recent]
+    max_cpm = max(cpms) if cpms else 1
+    min_cpm = min(cpms) if cpms else 0
+    range_cpm = max_cpm - min_cpm if max_cpm > min_cpm else 1
+
+    print("\n" + "-" * 70)
+    print("CPM Trend (last 21 days):")
+    print("-" * 70)
+
+    # Simple ASCII chart - 5 rows
+    chart_height = 5
+    for row in range(chart_height, 0, -1):
+        threshold = min_cpm + (range_cpm * row / chart_height)
+        line = f"${threshold:5.0f} |"
+        for cpm in cpms:
+            if cpm >= threshold:
+                line += "█"
+            elif cpm >= threshold - (range_cpm / chart_height / 2):
+                line += "▄"
+            else:
+                line += " "
+        print(line)
+
+    # X-axis with dates
+    print("       +" + "-" * len(cpms))
+    dates = [d["date"][-5:] for d in recent]  # MM-DD format
+    print(f"        {dates[0]}{'':>{len(cpms)-10}}{dates[-1]}")
+
+    # Identify when the spike started
+    if len(cpms) >= 7:
+        baseline_avg = sum(cpms[:7]) / 7
+        for i, cpm in enumerate(cpms):
+            if cpm > baseline_avg * 1.3:  # 30% above baseline
+                spike_date = recent[i]["date"]
+                print(f"\n⚠️  CPM spike detected starting ~{spike_date}")
+                break
+
+    print("")
+
+
 def print_anomalies(detection_result: dict):
     """Pretty print detected anomalies."""
     print("\n" + "=" * 70)
@@ -244,10 +314,17 @@ async def run_detection_only(args):
 async def run_full_rca_pipeline(args):
     """Run full RCA pipeline (detect + investigate)."""
     from models.rca_agent import run_full_rca
+    from helpers.rca_checks import get_metric_timeline
 
     print(f"Running full RCA pipeline for tenant '{args.tenant}'...")
     print(f"Baseline: {args.baseline_days} days, Current: {args.current_days} days")
-    print(f"Will investigate up to {args.max_anomalies} anomalies")
+
+    # First, show the timeline to give context
+    print("\nFetching account metrics timeline...")
+    timeline_data = await get_metric_timeline(days=args.baseline_days, tenant=args.tenant)
+    print_timeline(timeline_data)
+
+    print(f"\nInvestigating up to {args.max_anomalies} anomalies...")
 
     result = await run_full_rca(
         tenant=args.tenant,

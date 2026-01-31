@@ -32,6 +32,84 @@ CAST_DAILY_BUDGET = "SAFE_CAST(AD_GROUP_DAILY_BUDGET AS FLOAT64)"
 CAST_CAMPAIGN_CAP = "SAFE_CAST(CAMPAIGN_SPEND_CAP AS FLOAT64)"
 
 
+async def get_metric_timeline(
+    days: int = 30,
+    tenant: Literal["tl", "wh"] = "wh"
+) -> Dict[str, Any]:
+    """
+    Get daily timeline of key metrics for the account.
+
+    Returns daily CPM, ROAS, CPA trends to show when issues started.
+    """
+    engine = RCACheckEngine(tenant)
+
+    query = f"""
+    SELECT
+        DATE(TIMESTAMP(datetime_IST)) as date,
+        AVG({CAST_CPM}) as avg_cpm,
+        SAFE_DIVIDE(SUM({CAST_ROAS} * {CAST_SPEND}), SUM({CAST_SPEND})) as weighted_roas,
+        AVG({CAST_CPA}) as avg_cpa,
+        SUM({CAST_SPEND}) as total_spend,
+        COUNT(DISTINCT AD_NAME) as active_ads
+    FROM `{engine.table}`
+    WHERE data_source = 'Ad Providers'
+      AND TIMESTAMP(datetime_IST) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+      AND {CAST_SPEND} > 0
+      AND CAMPAIGN_STATUS = 'ACTIVE'
+    GROUP BY DATE(TIMESTAMP(datetime_IST))
+    ORDER BY date
+    """
+
+    results = engine._run_query(query)
+
+    if not results:
+        return {"error": "No data found", "timeline": []}
+
+    timeline = []
+    for row in results:
+        timeline.append({
+            "date": str(row.get("date")),
+            "cpm": round(float(row.get("avg_cpm") or 0), 2),
+            "roas": round(float(row.get("weighted_roas") or 0), 2),
+            "cpa": round(float(row.get("avg_cpa") or 0), 2),
+            "spend": round(float(row.get("total_spend") or 0), 0),
+            "active_ads": int(row.get("active_ads") or 0),
+        })
+
+    # Calculate week-over-week changes
+    if len(timeline) >= 14:
+        last_week = timeline[-7:]
+        prev_week = timeline[-14:-7]
+
+        avg_cpm_last = sum(d["cpm"] for d in last_week) / 7
+        avg_cpm_prev = sum(d["cpm"] for d in prev_week) / 7
+        cpm_change = ((avg_cpm_last - avg_cpm_prev) / avg_cpm_prev * 100) if avg_cpm_prev > 0 else 0
+
+        avg_roas_last = sum(d["roas"] for d in last_week) / 7
+        avg_roas_prev = sum(d["roas"] for d in prev_week) / 7
+        roas_change = ((avg_roas_last - avg_roas_prev) / avg_roas_prev * 100) if avg_roas_prev > 0 else 0
+    else:
+        cpm_change = 0
+        roas_change = 0
+        avg_cpm_last = 0
+        avg_cpm_prev = 0
+        avg_roas_last = 0
+        avg_roas_prev = 0
+
+    return {
+        "timeline": timeline,
+        "period_days": days,
+        "summary": {
+            "cpm_wow_change": round(cpm_change, 1),
+            "roas_wow_change": round(roas_change, 1),
+            "avg_cpm_last_week": round(avg_cpm_last, 2),
+            "avg_cpm_prev_week": round(avg_cpm_prev, 2),
+            "avg_roas_last_week": round(avg_roas_last, 2),
+            "avg_roas_prev_week": round(avg_roas_prev, 2),
+        }
+    }
+
+
 class RCACheckEngine:
     """Engine for running RCA diagnostic checks against BigQuery."""
 
