@@ -80,16 +80,69 @@ Agatha = Orchestrator coordinating the above agents
 
 ## Open Questions (To Resolve)
 
-### Data Schema
-- [ ] What fields are available in BigQuery?
-- [ ] Campaign/Ad Set/Ad level granularity?
-- [ ] Historical data range available?
-- [ ] Conversion tracking setup (what counts as conversion)?
+### Data Schema ✅ (Validated from BigQuery exports)
 
-### "Good" vs "Bad" Ad Spend Definition
-- [ ] What metrics define "good" spend? (ROAS threshold? CPA below target? Positive trend?)
-- [ ] What metrics define "bad" spend? (Zero conversions? ROAS < 1? High spend low impressions?)
-- [ ] Are there business-specific thresholds to use?
+**Available fields:**
+- [x] spend, return_on_ad_spend_roas, impressions, clicks, ctr, cpc, cpm
+- [x] datetime_PST/IST, ad_name, ad_group_name, customer_lastVisit_campaign
+- [x] ad_provider (Google Ads, Facebook Ads, TikTok Ads)
+- [x] creative_object_type (Search, Shopping, Video, SHARE, Performance Max)
+- [x] store (market: US, IND)
+- [x] customer_entry_page (landing page URL)
+- [ ] ❌ conversion count — NOT available (limits CVR/CPA analysis)
+
+**Granularity:** Ad level (daily)
+
+**Historical data:**
+- WH: 76 days (Nov 2025 - Jan 2026)
+- TL: 298 days (Apr 2025 - Jan 2026)
+
+**Conversion tracking:** ROAS available but not conversion count
+
+### "Good" vs "Bad" Ad Spend Definition ✅ (Data-Validated)
+
+> **Key Insight:** Good/bad is relative to account average, not fixed numbers.
+
+**🟢 GOOD SPEND** (Scale up 30-100%)
+```
+ROAS >= 2× account average
+AND spend >= $1,000
+AND running >= 7 days
+```
+
+Examples validated:
+- TL: "Thirdlove® Bras" — $212k spend, 29.58 ROAS (4.3× avg)
+- WH: "Whispering Homes" — ₹426k spend, 8.12 ROAS (4.5× avg)
+
+**🔴 BAD SPEND** (Pause or reduce 50-100%)
+```
+ROAS = 0 after $5k+ spend AND 7+ days
+OR ROAS < 0.5× account average after $10k+
+OR ROAS declining 3+ consecutive weeks
+```
+
+Examples validated:
+- TL: TikTok ads — $88k spend, 0.00 ROAS (entire channel failing)
+- WH: Floor Lamps Carousel — ₹55k spend, 0.00 ROAS after 28 days
+
+**Decision Matrix:**
+| ROAS vs Avg | Spend | Days | Status | Action |
+|-------------|-------|------|--------|--------|
+| >= 2× | >= $1k | >= 7 | 🟢 GOOD | Scale 30-100% |
+| 1× - 2× | >= $1k | >= 7 | 🟡 OK | Monitor |
+| 0.5× - 1× | >= $10k | >= 7 | 🟠 WARNING | Review |
+| < 0.5× | >= $10k | >= 7 | 🔴 BAD | Reduce 50% |
+| = 0 | >= $5k | >= 7 | 🔴 BAD | Pause |
+| Any | < $1k | < 7 | ⚪ WAIT | Need more data |
+
+**Available Metrics:**
+- ✅ spend, ROAS, impressions, clicks, CTR, CPC
+- ❌ conversion count, CVR, CPA (not in BigQuery data)
+
+**Thresholds:**
+- Learning phase: 7 days (don't judge too early)
+- Significant change: z-score 1.5 (not 7% — too sensitive given volatility)
+- Zero ROAS alert: after $5k spend AND 7 days
 
 ### Meta Integration
 - [ ] Direct Meta Marketing API vs Supermetrics?
