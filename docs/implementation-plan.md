@@ -457,7 +457,6 @@ You are analyzing ad performance data. Your classifications MUST be grounded in 
 """
 ```
 
----
 
 ## Few-Shot Examples
 
@@ -1015,8 +1014,8 @@ CMD ["npm", "start"]
 
 ### Environment Variables (Cloud Run)
 - `AI_PROVIDER`: gemini | openai
-- `GEMINI_MODEL`: gemini-2.5-pro
-- `GOOGLE_CLOUD_PROJECT`: GCP project ID
+- `GEMINI_MODEL`: gemini-3.0
+- `GOOGLE_CLOUD_PROJECT`: otb-dev-platform
 - `META_APP_ID`: Meta app credentials
 - `META_APP_SECRET`: Meta app secret
 - `FI_PROJECT_NAME`: Observability project name
