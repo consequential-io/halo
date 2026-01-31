@@ -156,9 +156,10 @@ def print_quick_results(top: dict, bottom: dict):
     print("-" * 70)
     for i, ad in enumerate(top['ads'], 1):
         roas_ratio = ad['roas'] / top['account_avg_roas'] if top['account_avg_roas'] > 0 else 0
-        print(f"\n{i}. {ad['ad_name'][:50]}")
+        status_icon = "✅" if ad.get('status') == 'ACTIVE' else "⏸️"
+        print(f"\n{i}. {status_icon} {ad['ad_name'][:50]}")
         print(f"   ROAS: {ad['roas']:.2f} ({roas_ratio:.1f}× avg) | Spend: ${ad['spend']:,.0f} | Days: {ad['days_active']}")
-        print(f"   Provider: {ad.get('ad_provider', 'N/A')}")
+        print(f"   Provider: {ad.get('ad_provider', 'N/A')} | Status: {ad.get('status', 'N/A')}")
 
     # Bottom Performers
     print("\n" + "-" * 70)
@@ -167,10 +168,11 @@ def print_quick_results(top: dict, bottom: dict):
     print(f"Total underperformer spend: ${bottom['total_underperformer_spend']:,.0f}")
     for i, ad in enumerate(bottom['ads'], 1):
         roas_ratio = ad['roas'] / bottom['account_avg_roas'] if bottom['account_avg_roas'] > 0 else 0
-        status = "🔴 ZERO ROAS" if ad['roas'] == 0 else f"⚠️ {roas_ratio:.1f}× avg"
-        print(f"\n{i}. {ad['ad_name'][:50]}")
-        print(f"   ROAS: {ad['roas']:.2f} ({status}) | Spend: ${ad['spend']:,.0f} | Days: {ad['days_active']}")
-        print(f"   Provider: {ad.get('ad_provider', 'N/A')}")
+        roas_status = "🔴 ZERO ROAS" if ad['roas'] == 0 else f"⚠️ {roas_ratio:.1f}× avg"
+        status_icon = "✅" if ad.get('status') == 'ACTIVE' else "⏸️"
+        print(f"\n{i}. {status_icon} {ad['ad_name'][:50]}")
+        print(f"   ROAS: {ad['roas']:.2f} ({roas_status}) | Spend: ${ad['spend']:,.0f} | Days: {ad['days_active']}")
+        print(f"   Provider: {ad.get('ad_provider', 'N/A')} | Status: {ad.get('status', 'N/A')}")
 
     # Quick Summary
     print("\n" + "=" * 70)

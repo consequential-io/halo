@@ -46,6 +46,7 @@ AD_PERFORMANCE_QUERY = """
 SELECT
     AD_NAME as ad_name,
     ad_provider,
+    MAX(CAMPAIGN_STATUS) as status,
     SUM(spend) as spend,
     SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as roas,
     DATE_DIFF(
@@ -60,6 +61,7 @@ WHERE data_source = 'Ad Providers'
   AND ad_provider IN ('Facebook Ads', 'Google Ads', 'TikTok Ads')
   AND AD_NAME IS NOT NULL
   AND AD_NAME != ''
+  AND CAMPAIGN_STATUS = 'ACTIVE'
 GROUP BY AD_NAME, ad_provider
 HAVING spend >= 1000
 ORDER BY spend DESC
@@ -122,6 +124,7 @@ class BigQueryConnector:
             ads.append({
                 "ad_name": row.ad_name,
                 "ad_provider": row.ad_provider,
+                "status": row.status,
                 "spend": float(row.spend or 0),
                 "roas": float(row.roas or 0),
                 "days_active": int(row.days_active or 0),
@@ -228,6 +231,7 @@ def _load_fixture_data(tenant: str) -> Dict[str, Any]:
         ads.append({
             "ad_name": ad["ad_name"],
             "ad_provider": ad["ad_provider"],
+            "status": ad.get("status", "ACTIVE"),  # Default to ACTIVE for fixtures
             "spend": ad["spend"],
             "roas": ad["roas"],
             "days_active": ad["days_active"],
