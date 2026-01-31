@@ -97,6 +97,16 @@ class HallucinationValidator:
         Returns:
             (is_valid, error_message)
         """
+        # Extract numbers that appear in ad_name (to skip them)
+        ad_name = self.grounding.get("ad_name", "")
+        ad_name_numbers = set()
+        if ad_name:
+            for match in re.findall(r'\b\d+\.?\d*\b', str(ad_name)):
+                try:
+                    ad_name_numbers.add(float(match))
+                except ValueError:
+                    pass
+
         # Extract numbers from reasoning (integers and decimals)
         number_pattern = r'\b\d+\.?\d*\b'
         found_numbers = re.findall(number_pattern, reasoning)
@@ -109,6 +119,9 @@ class HallucinationValidator:
                     continue
                 # Skip percentages that are simple (25, 50, 75, 100)
                 if num in [25, 50, 75, 100, 30, 70]:
+                    continue
+                # Skip numbers from ad_name (e.g., ad IDs like 25116)
+                if num in ad_name_numbers:
                     continue
                 # Check if number appears in grounding data
                 if not self._number_in_grounding(num):

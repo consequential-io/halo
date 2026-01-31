@@ -1,5 +1,15 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # python-dotenv not installed, use environment variables directly
 
 
 @dataclass
@@ -8,7 +18,7 @@ class Settings:
 
     # AI Provider
     ai_provider: str = "gemini"  # gemini | openai
-    gemini_model: str = "gemini-3.0-flash"
+    gemini_model: str = "gemini-2.0-flash"
     openai_model: str = "gpt-4-turbo"
 
     # BigQuery
@@ -33,7 +43,7 @@ class Settings:
         """Load settings from environment variables."""
         return cls(
             ai_provider=os.getenv("AI_PROVIDER", "gemini"),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.0-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
             gcp_project=os.getenv("GCP_PROJECT", "otb-dev-platform"),
             bq_dataset=os.getenv("BQ_DATASET", "master"),
