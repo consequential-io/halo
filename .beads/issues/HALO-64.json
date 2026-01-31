@@ -1,0 +1,13 @@
+{
+  "id": "HALO-64",
+  "title": "BigQuery Integration Complete",
+  "type": "task",
+  "status": "closed",
+  "priority": 1,
+  "description": "Implemented BigQuery connector for get_ad_data() with:\n- _get_ad_data_from_bq() function\n- _calculate_z_scores_bq() using LOG transform\n- DATA_SOURCE and DATA_LOOKBACK_DAYS env vars\n- Graceful fallback to fixtures on error\n- All manual tests passing with 45 days BQ data",
+  "created": "2026-01-31T23:45:00Z",
+  "updated": "2026-01-31T23:45:00Z",
+  "closed": "2026-01-31T23:45:00Z",
+  "blockedBy": [],
+  "blocks": ["HALO-21"]
+}

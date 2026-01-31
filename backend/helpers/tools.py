@@ -5,12 +5,18 @@ These tools are used by the Analyze Agent to find anomalies in ad performance da
 """
 
 import json
+import logging
+import math
 import statistics
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from collections import defaultdict
 
 from config.anomaly_config import ANOMALY_CONFIG, ONTOLOGY_CONFIG, RCA_CONFIG
+from config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -19,7 +25,7 @@ from config.anomaly_config import ANOMALY_CONFIG, ONTOLOGY_CONFIG, RCA_CONFIG
 
 def get_ad_data(
     account_id: str = "tl",
-    days: int = 30,
+    days: int | None = None,
     source: str = "fixture"
 ) -> dict[str, Any]:
     """
@@ -27,16 +33,22 @@ def get_ad_data(
 
     Args:
         account_id: Account identifier ("tl" for ThirdLove, "wh" for WhisperingHomes)
-        days: Number of days of data to fetch (used for BQ, ignored for fixtures)
+        days: Number of days of data to fetch (defaults to settings.data_lookback_days)
         source: Data source ("fixture" or "bq")
 
     Returns:
         Dict with "ads" list and "metadata"
     """
+    # Use settings default if not specified
+    if days is None:
+        days = settings.data_lookback_days
+
     if source == "fixture":
         return _get_ad_data_from_fixture(account_id)
+    elif source == "bq":
+        return _get_ad_data_from_bq(account_id, days)
     else:
-        # TODO: Implement BigQuery connector
+        logger.warning(f"Unknown source '{source}', defaulting to fixture")
         return _get_ad_data_from_fixture(account_id)
 
 
@@ -86,6 +98,192 @@ def _get_ad_data_from_fixture(account_id: str) -> dict[str, Any]:
             return {"ads": [], "error": f"Unexpected fixture format: {type(data)}"}
 
     return {"ads": [], "error": f"Fixture not found: {filename}"}
+
+
+def _get_ad_data_from_bq(account_id: str, days: int) -> dict[str, Any]:
+    """
+    Fetch ad performance data from BigQuery.
+
+    Args:
+        account_id: Account identifier ("tl" or "wh")
+        days: Number of days of data to fetch
+
+    Returns:
+        Dict with "ads" list and "metadata"
+    """
+    try:
+        from google.cloud import bigquery
+        from google.cloud.exceptions import GoogleCloudError
+    except ImportError:
+        logger.error("google-cloud-bigquery not installed. Falling back to fixtures.")
+        return _get_ad_data_from_fixture(account_id)
+
+    view_map = {
+        "tl": "northstar_master_combined_tl",
+        "wh": "northstar_master_combined_wh",
+    }
+
+    view_name = view_map.get(account_id.lower())
+    if not view_name:
+        return {"ads": [], "error": f"Unknown account_id: {account_id}"}
+
+    try:
+        client = bigquery.Client(project=settings.gcp_project)
+
+        # TODO: Add timezone configuration
+        # Production uses: DATE(DATETIME(TIMESTAMP(datetime_UTC), @timezone))
+        # TODO: Add currency conversion
+        # Production uses: SAFE_MULTIPLY(spend, {{currency_field:column}})
+
+        query = f"""
+        SELECT
+            ad_name,
+            ad_provider,
+            ad_type,
+            store,
+            ad_id,
+            creative_variants,
+            days_active,
+            Spend,
+            Purchases,
+            Conversion_Value,
+            total_impressions,
+            total_clicks,
+            ROAS,
+            CPA,
+            CTR,
+            CVR
+        FROM (
+            SELECT
+                TRIM(REGEXP_REPLACE(AD_NAME, '_', ' ')) as ad_name,
+                ANY_VALUE(ad_provider) as ad_provider,
+                ANY_VALUE(static_video_adtype) as ad_type,
+                ANY_VALUE(store) as store,
+                ANY_VALUE(ad_id) as ad_id,
+                COUNT(DISTINCT CREATIVE_NAME) as creative_variants,
+                COUNT(DISTINCT DATE(TIMESTAMP(datetime_UTC))) as days_active,
+
+                SUM(SAFE_CAST(spend AS FLOAT64)) AS Spend,
+                SUM(SAFE_CAST(total_orders AS INT64)) AS Purchases,
+                SUM(SAFE_CAST(gross_sales AS FLOAT64)) AS Conversion_Value,
+                SUM(SAFE_CAST(total_ad_impression AS INT64)) as total_impressions,
+                SUM(SAFE_CAST(ad_click AS INT64)) as total_clicks,
+
+                SAFE_DIVIDE(SUM(SAFE_CAST(gross_sales AS FLOAT64)),
+                            NULLIF(SUM(SAFE_CAST(spend AS FLOAT64)), 0)) AS ROAS,
+                SAFE_DIVIDE(SUM(SAFE_CAST(spend AS FLOAT64)),
+                            NULLIF(SUM(SAFE_CAST(total_orders AS INT64)), 0)) AS CPA,
+                SAFE_DIVIDE(SUM(SAFE_CAST(ad_click AS INT64)),
+                            NULLIF(SUM(SAFE_CAST(total_ad_impression AS INT64)), 0)) AS CTR,
+                SAFE_DIVIDE(SUM(SAFE_CAST(total_orders AS INT64)),
+                            NULLIF(SUM(SAFE_CAST(ad_click AS INT64)), 0)) AS CVR
+
+            FROM `{settings.gcp_project}.{settings.bq_dataset}.{view_name}`
+            WHERE data_source = 'Ad Providers'
+              AND DATE(TIMESTAMP(datetime_UTC)) >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)
+              AND DATE(TIMESTAMP(datetime_UTC)) <= CURRENT_DATE()
+            GROUP BY 1
+        )
+        WHERE Spend >= 100
+        ORDER BY Spend DESC
+        """
+
+        query_job = client.query(query)
+        results = query_job.result()
+
+        ads = []
+        for row in results:
+            ad = {
+                "ad_name": row.ad_name,
+                "AD_NAME": row.ad_name,  # For compatibility
+                "ad_provider": row.ad_provider,
+                "ad_type": row.ad_type,
+                "store": row.store,
+                "ad_id": row.ad_id,
+                "creative_variants": row.creative_variants or 1,
+                "days_active": row.days_active or 0,
+                "Spend": float(row.Spend) if row.Spend else 0,
+                "Purchases": int(row.Purchases) if row.Purchases else 0,
+                "Conversion_Value": float(row.Conversion_Value) if row.Conversion_Value else 0,
+                "total_impressions": int(row.total_impressions) if row.total_impressions else 0,
+                "total_clicks": int(row.total_clicks) if row.total_clicks else 0,
+                "ROAS": float(row.ROAS) if row.ROAS else 0,
+                "CPA": float(row.CPA) if row.CPA else 0,
+                "CTR": float(row.CTR) if row.CTR else 0,
+                "CVR": float(row.CVR) if row.CVR else 0,
+                # Fields not available from BQ - set to None
+                # TODO: Implement derived metrics (requires platform benchmarks CTE)
+                "audience_engagement_score": None,
+                "competitive_pressure": None,
+                "budget_utilization": None,
+                "creative_status": "unknown",
+                "recency": 0,
+            }
+            ads.append(ad)
+
+        # Calculate z-scores in Python using LOG transform (matches production)
+        ads = _calculate_z_scores_bq(ads)
+
+        return {
+            "ads": ads,
+            "metadata": {
+                "source": "bigquery",
+                "account_id": account_id,
+                "days": days,
+                "query_time": str(datetime.utcnow()),
+                "total_ads": len(ads),
+            }
+        }
+
+    except Exception as e:
+        logger.warning(f"BigQuery query failed: {e}. Falling back to fixtures.")
+        return _get_ad_data_from_fixture(account_id)
+
+
+def _calculate_z_scores_bq(ads: list[dict]) -> list[dict]:
+    """
+    Calculate z-scores using LOG transform (matches production query methodology).
+
+    Production uses: (LOG(metric + 1e-8) - AVG(LOG(metric + 1e-8))) / STDDEV(LOG(metric + 1e-8))
+    """
+    if len(ads) < 2:
+        for ad in ads:
+            ad["z_cpa"] = ad["z_roas"] = ad["z_ctr"] = ad["z_cvr"] = 0.0
+        return ads
+
+    def log_safe(x):
+        """LOG(x + 1e-8) to handle zeros, matching production."""
+        return math.log(x + 1e-8) if x is not None and x >= 0 else None
+
+    for metric in ["CPA", "ROAS", "CTR", "CVR"]:
+        # Get log-transformed values
+        log_values = []
+        for ad in ads:
+            val = ad.get(metric)
+            log_val = log_safe(val)
+            if log_val is not None:
+                log_values.append(log_val)
+
+        if len(log_values) < 2:
+            for ad in ads:
+                ad[f"z_{metric.lower()}"] = 0.0
+            continue
+
+        # Calculate mean and std of log-transformed values
+        mean = sum(log_values) / len(log_values)
+        variance = sum((v - mean) ** 2 for v in log_values) / len(log_values)
+        std = variance ** 0.5 if variance > 0 else 0
+
+        # Calculate z-scores
+        for ad in ads:
+            val = ad.get(metric)
+            log_val = log_safe(val)
+            if log_val is not None and std > 0:
+                ad[f"z_{metric.lower()}"] = round((log_val - mean) / std, 4)
+            else:
+                ad[f"z_{metric.lower()}"] = 0.0
+
+    return ads
 
 
 # =============================================================================
@@ -323,6 +521,17 @@ def get_ontology(
 # Tool 4: Run RCA - Root Cause Analysis (HALO-61)
 # =============================================================================
 
+def _percentile(values: list[float], p: float) -> float:
+    """Calculate the p-th percentile of a list of values."""
+    if not values:
+        return 0
+    sorted_values = sorted(values)
+    k = (len(sorted_values) - 1) * p / 100
+    f = int(k)
+    c = f + 1 if f + 1 < len(sorted_values) else f
+    return sorted_values[f] + (k - f) * (sorted_values[c] - sorted_values[f])
+
+
 def run_rca(
     anomaly_ad: dict,
     all_ads: list[dict],
@@ -346,35 +555,57 @@ def run_rca(
 
     root_causes = []
 
-    # 1. Audience Analysis
-    ad_engagement = anomaly_ad.get("audience_engagement_score") or 0
-    if all_ads:
-        engagement_values = [
-            ad.get("audience_engagement_score") or 0
-            for ad in all_ads
-            if ad.get("audience_engagement_score") is not None
-        ]
-        platform_engagement = sum(engagement_values) / len(engagement_values) if engagement_values else 0
+    # Pre-compute percentiles for data-driven thresholds
+    def get_values(field: str) -> list[float]:
+        return [ad.get(field, 0) for ad in all_ads if ad.get(field) is not None]
 
-        if platform_engagement > 0 and ad_engagement < platform_engagement * 0.5:
+    engagement_values = get_values("audience_engagement_score")
+    pressure_values = get_values("competitive_pressure")
+    budget_values = get_values("budget_utilization")
+    ctr_values = get_values("CTR")
+
+    # 1. Audience Analysis (data-driven: below 25th percentile)
+    ad_engagement = anomaly_ad.get("audience_engagement_score") or 0
+    if engagement_values:
+        p25_engagement = _percentile(engagement_values, 25)
+        avg_engagement = sum(engagement_values) / len(engagement_values)
+
+        if ad_engagement < p25_engagement:
             root_causes.append({
                 "factor": "audience_engagement",
-                "finding": f"Engagement score {ad_engagement:.1f} vs platform avg {platform_engagement:.1f} ({ad_engagement/platform_engagement*100:.0f}%)",
+                "finding": f"Engagement score {ad_engagement:.1f} below 25th percentile ({p25_engagement:.1f}), avg: {avg_engagement:.1f}",
                 "impact": "high",
                 "suggestion": "Review audience targeting settings",
             })
 
-    # 2. Competitive Pressure
+    # 2. Competitive Pressure (data-driven: above 75th percentile)
     ad_pressure = anomaly_ad.get("competitive_pressure", 0)
-    if ad_pressure > 0.7:
-        root_causes.append({
-            "factor": "competitive_pressure",
-            "finding": f"High competitive pressure: {ad_pressure:.2f} (threshold: 0.7)",
-            "impact": "medium",
-            "suggestion": "Consider different placements or dayparting",
-        })
+    if pressure_values:
+        p75_pressure = _percentile(pressure_values, 75)
 
-    # 3. Creative Analysis
+        if ad_pressure > p75_pressure:
+            root_causes.append({
+                "factor": "competitive_pressure",
+                "finding": f"Competitive pressure {ad_pressure:.2f} above 75th percentile ({p75_pressure:.2f})",
+                "impact": "medium",
+                "suggestion": "Consider different placements or dayparting",
+            })
+
+    # 3. CTR Analysis (data-driven: below 25th percentile)
+    ad_ctr = anomaly_ad.get("CTR", 0)
+    if ctr_values:
+        p25_ctr = _percentile(ctr_values, 25)
+        avg_ctr = sum(ctr_values) / len(ctr_values)
+
+        if ad_ctr < p25_ctr:
+            root_causes.append({
+                "factor": "low_ctr",
+                "finding": f"CTR {ad_ctr:.4f} below 25th percentile ({p25_ctr:.4f}), avg: {avg_ctr:.4f}",
+                "impact": "high",
+                "suggestion": "Improve ad copy, creative, or targeting to increase click-through rate",
+            })
+
+    # 4. Creative Analysis
     creative_variants = anomaly_ad.get("creative_variants", 1)
     if creative_variants == 1:
         root_causes.append({
@@ -394,17 +625,20 @@ def run_rca(
             "suggestion": "Refresh creative assets immediately",
         })
 
-    # 4. Budget Analysis
+    # 5. Budget Analysis (data-driven: above 75th percentile)
     budget_util = anomaly_ad.get("budget_utilization", 0)
-    if budget_util > 100:
-        root_causes.append({
-            "factor": "budget_overutilization",
-            "finding": f"Budget utilization at {budget_util:.0f}% (overspending)",
-            "impact": "medium",
-            "suggestion": "Review daily budget caps",
-        })
+    if budget_values:
+        p75_budget = _percentile(budget_values, 75)
 
-    # 5. Days Active (learning phase)
+        if budget_util > p75_budget:
+            root_causes.append({
+                "factor": "budget_overutilization",
+                "finding": f"Budget utilization {budget_util:.0f}% above 75th percentile ({p75_budget:.0f}%)",
+                "impact": "medium",
+                "suggestion": "Review daily budget caps",
+            })
+
+    # 6. Days Active (learning phase)
     days_active = anomaly_ad.get("days_active", 0)
     if days_active < 7:
         root_causes.append({
