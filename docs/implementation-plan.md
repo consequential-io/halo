@@ -3,7 +3,28 @@
 ## Overview
 Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 
-**Approach:** AI-First (LLM reasons, Python validates)
+**Approach:** AI-First (LLM reasons with guidelines, Python validates)
+
+## Decisions Made
+
+| # | Question | Decision |
+|---|----------|----------|
+| Team split | Both fullstack, split by feature | Each owns E2E features |
+| Data source | Meta API (demo) + BigQuery (dev/test/fallback) | BQ has both Meta & Google data |
+| AI Model | Config-driven | Switch between Gemini/OpenAI via env var |
+| Execute actions | Mock write for hackathon | Real API stretch goal |
+| BigQuery views | TL + WH views identified | See BigQuery Data Access section |
+| Meta OAuth | Custom OAuth with httpx | See Meta API Integration section |
+| Meta creatives | Two-step fetch pattern | See Meta API Integration section |
+| Classification | AI-first (LLM reasons, Python validates) | Not rules-based |
+
+## Open Questions
+
+| # | Question | Owner | Status |
+|---|----------|-------|--------|
+| 6 | Meta OAuth scopes needed? | Hemanth | RESOLVED - see Meta API section |
+| 7 | Meta Ad creatives access? | Hemanth | RESOLVED - see Meta API section |
+| 8 | Demo scenario/script? | Jaidev | TL account showing $88k TikTok waste |
 
 ---
 
@@ -134,6 +155,262 @@ Every Analyze Agent response must match this structure:
 | Any | < $1k | < 7 | WAIT | Learning |
 
 **These are GUIDELINES.** LLM may deviate with reasoning (e.g., "1.95× avg but upward trend → GOOD").
+
+---
+
+## Meta API Integration
+
+### Facebook Login Pattern
+
+**Frontend (simple redirect):**
+```javascript
+const handleFacebookLogin = () => {
+  const facebookLoginUrl = buildUrl("auth/facebook", { redirectTo: returnUrl });
+  window.open(facebookLoginUrl, "_self");
+};
+```
+
+**Backend route needed:** `/auth/facebook` (FastAPI OAuth handler)
+- Redirects to Facebook OAuth
+- Handles callback with token exchange
+- Stores access token in session
+
+### Meta Ad Creative Preview
+
+**Two-step fetch pattern:**
+
+```
+Step 1: GET /meta-ads/ads/{adId}
+Response: {
+  "data": {
+    "ad_id": "...",
+    "ad_name": "...",
+    "creative_id": "...",    // Needed for Step 2
+    "image_url": "...",      // Thumbnail URL
+    "status": "ACTIVE"
+  }
+}
+
+Step 2: GET /meta-ads/creative/{creativeId}/preview
+Response: {
+  "data": {
+    "has_video": true/false,
+    "has_preview": true/false,
+    "preview_html": "<iframe>...</iframe>"  // Embeddable preview
+  }
+}
+```
+
+### Required Meta API Scopes
+- `ads_read` - Read ad account data
+- `ads_management` - For Execute Agent (if doing real writes)
+- `business_management` - Access business accounts
+
+### Meta Marketing API Endpoints
+```python
+# Ad details
+GET https://graph.facebook.com/v19.0/{ad_id}
+  ?fields=id,name,creative{id,image_url,thumbnail_url,video_id},status
+  &access_token={token}
+
+# Creative preview
+GET https://graph.facebook.com/v19.0/{creative_id}/previews
+  ?ad_format=DESKTOP_FEED_STANDARD
+  &access_token={token}
+```
+
+### Custom OAuth Flow (FastAPI)
+```python
+# routes/auth_routes.py
+from fastapi import APIRouter, Request
+from fastapi.responses import RedirectResponse
+import httpx
+
+router = APIRouter()
+
+META_APP_ID = settings.meta_app_id
+META_APP_SECRET = settings.meta_app_secret
+META_REDIRECT_URI = settings.meta_redirect_uri
+
+@router.get("/facebook")
+async def facebook_login(redirectTo: str = "/"):
+    """Redirect to Facebook OAuth consent screen"""
+    oauth_url = (
+        f"https://www.facebook.com/v19.0/dialog/oauth?"
+        f"client_id={META_APP_ID}"
+        f"&redirect_uri={META_REDIRECT_URI}"
+        f"&scope=ads_read,ads_management,business_management"
+        f"&state={redirectTo}"  # Pass return URL in state
+    )
+    return RedirectResponse(url=oauth_url)
+
+@router.get("/facebook/callback")
+async def facebook_callback(code: str, state: str = "/"):
+    """Handle OAuth callback, exchange code for token"""
+    async with httpx.AsyncClient() as client:
+        # Exchange code for access token
+        token_response = await client.get(
+            "https://graph.facebook.com/v19.0/oauth/access_token",
+            params={
+                "client_id": META_APP_ID,
+                "client_secret": META_APP_SECRET,
+                "redirect_uri": META_REDIRECT_URI,
+                "code": code
+            }
+        )
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+
+        # Get long-lived token (optional but recommended)
+        long_token_response = await client.get(
+            "https://graph.facebook.com/v19.0/oauth/access_token",
+            params={
+                "grant_type": "fb_exchange_token",
+                "client_id": META_APP_ID,
+                "client_secret": META_APP_SECRET,
+                "fb_exchange_token": access_token
+            }
+        )
+        long_token_data = long_token_response.json()
+
+        # Store token in session/memory (for hackathon)
+        # In production: encrypt and store in database
+
+        # Redirect to frontend with token
+        return RedirectResponse(
+            url=f"{state}?token={long_token_data.get('access_token', access_token)}"
+        )
+```
+
+---
+
+## Architecture
+
+```
+Meta OAuth → Agatha Orchestrator
+                    │
+    ┌───────────────┼───────────────┐
+    ▼               ▼               ▼
+ANALYZE         RECOMMEND        EXECUTE
+(AI reasoning)  (AI reasoning)  (Mock write)
+```
+
+---
+
+## Team Feature Split
+
+| Feature | Owner | Scope |
+|---------|-------|-------|
+| **Analyze flow** | Person A | BQ/Meta read → Analyze Agent → Analysis UI |
+| **Recommend flow** | Person A | Recommend Agent → Recommendations UI |
+| **Execute flow** | Person B | Execute Agent → Approval UI → Confirmation |
+| **Foundation** | Person B | Scaffolding, session manager, base controller |
+| **Auth/OAuth** | Person B | Meta OAuth integration |
+| **Demo prep** | Both | Script, fallback, submission materials |
+
+---
+
+## Data Source Strategy
+
+```
+┌─────────────────────────────────────────┐
+│           Data Source Priority          │
+├─────────────────────────────────────────┤
+│ DEMO:     Meta API (live, impressive)   │
+│ DEV/TEST: BigQuery (pre-loaded, fast)   │
+│ FALLBACK: BigQuery (if Meta fails)      │
+├─────────────────────────────────────────┤
+│ BigQuery contains: Meta + Google data   │
+│ - TL: 298 days history                  │
+│ - WH: 76 days history                   │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## BigQuery Data Access
+
+### Views
+| Tenant | View |
+|--------|------|
+| ThirdLove (TL) | `otb-dev-platform.master.northstar_master_combined_tl` |
+| WhisperingHomes (WH) | `otb-dev-platform.master.northstar_master_combined_wh` |
+
+### Data Source Filtering (Critical)
+Each metric type requires filtering by authoritative source to avoid double-counting:
+
+| Metric Type | Filter | Columns |
+|-------------|--------|---------|
+| **Advertising** | `WHERE data_source = 'Ad Providers'` | spend, ad_click, CPA, CPC, CPM, CTR, ROAS |
+| **Revenue** | `WHERE data_source = 'Shopify'` | gross_sales, net_sales, total_sales, order_id |
+| **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
+
+### Key Query Pattern
+```sql
+SELECT
+    ad_name,
+    ad_provider,
+    SUM(spend) as spend,
+    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as roas,
+    DATE_DIFF(MAX(DATE(datetime_UTC)), MIN(DATE(datetime_UTC)), DAY) + 1 as days_active
+FROM `otb-dev-platform.master.northstar_master_combined_tl`
+WHERE data_source = 'Ad Providers'
+  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY ad_name, ad_provider
+ORDER BY spend DESC
+```
+
+### Account Average Calculation
+```sql
+-- Calculate account average ROAS (last 30 days)
+SELECT
+    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as weighted_avg_roas
+FROM `otb-dev-platform.master.northstar_master_combined_tl`
+WHERE data_source = 'Ad Providers'
+  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND spend > 0
+```
+
+### ROAS Calculation (Mixed Sources - Use CTEs)
+```sql
+WITH revenue AS (
+  SELECT
+    DATE(TIMESTAMP(datetime_UTC, 'America/Los_Angeles')) as date,
+    SUM(total_sales) as revenue
+  FROM `otb-dev-platform.master.northstar_master_combined_tl`
+  WHERE data_source = 'Shopify'
+  GROUP BY date
+),
+ad_spend AS (
+  SELECT
+    DATE(TIMESTAMP(datetime_UTC, 'America/Los_Angeles')) as date,
+    SUM(spend) as spend
+  FROM `otb-dev-platform.master.northstar_master_combined_tl`
+  WHERE data_source = 'Ad Providers'
+  GROUP BY date
+)
+SELECT
+  r.date,
+  r.revenue,
+  a.spend,
+  SAFE_DIVIDE(r.revenue, a.spend) as calculated_roas
+FROM revenue r
+JOIN ad_spend a ON r.date = a.date
+ORDER BY r.date DESC
+```
+
+### Available Columns (Ad Providers)
+- `spend` - Total ad spend
+- `ROAS` - Return on ad spend (pre-calculated)
+- `ad_click` - Number of clicks
+- `CPA` - Cost per acquisition
+- `CPC` - Cost per click
+- `CPM` - Cost per mille (1000 impressions)
+- `CTR` - Click-through rate
+- `ad_name` - Ad creative name
+- `ad_provider` - Platform (Google Ads, Facebook Ads, TikTok Ads)
+- `store` - Market (US, IND)
+- `datetime_UTC` - Timestamp
 
 ---
 
@@ -382,90 +659,6 @@ def handle_validation_failure(llm_response: dict, violations: list[str], retry_c
 
 ---
 
-## Account Average Calculation
-
-The `account_avg_roas` must be calculated from BigQuery before calling the agent:
-
-```sql
--- Calculate account average ROAS (last 30 days)
-SELECT
-    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as weighted_avg_roas
-FROM `otb-dev-platform.master.northstar_master_combined_tl`
-WHERE data_source = 'Ad Providers'
-  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
-  AND spend > 0
-```
-
-Pass this to the agent in context:
-```python
-context = {
-    "account_avg_roas": 6.88,  # From query above
-    "ads": [...]  # Ad data to analyze
-}
-```
-
----
-
-## Architecture
-
-```
-Meta OAuth → Agatha Orchestrator
-                    │
-    ┌───────────────┼───────────────┐
-    ▼               ▼               ▼
-ANALYZE         RECOMMEND        EXECUTE
-(AI reasoning)  (AI reasoning)  (Mock write)
-```
-
----
-
-## Data Sources
-
-| Priority | Source | Use |
-|----------|--------|-----|
-| Demo | Meta API | Live data, impressive |
-| Dev/Test | BigQuery | Pre-loaded, fast |
-| Fallback | BigQuery | If Meta fails |
-
-### BigQuery Views
-- ThirdLove: `otb-dev-platform.master.northstar_master_combined_tl`
-- WhisperingHomes: `otb-dev-platform.master.northstar_master_combined_wh`
-
-### Key Query Pattern
-```sql
-SELECT
-    ad_name,
-    ad_provider,
-    SUM(spend) as spend,
-    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as roas,
-    DATE_DIFF(MAX(DATE(datetime_UTC)), MIN(DATE(datetime_UTC)), DAY) + 1 as days_active
-FROM `otb-dev-platform.master.northstar_master_combined_tl`
-WHERE data_source = 'Ad Providers'
-  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
-GROUP BY ad_name, ad_provider
-ORDER BY spend DESC
-```
-
----
-
-## Meta API Integration
-
-**Pattern:** Facebook OAuth → token → Marketing API calls
-
-**Required scopes:** `ads_read`, `ads_management`, `business_management`
-
-**Endpoints:**
-- Ad details: `GET /v19.0/{ad_id}?fields=id,name,creative{id,image_url},status`
-- Creative preview: `GET /v19.0/{creative_id}/previews?ad_format=DESKTOP_FEED_STANDARD`
-
-**Backend routes:**
-- `GET /auth/facebook` - Redirect to OAuth
-- `GET /auth/facebook/callback` - Exchange code for token
-- `GET /meta-ads/ads/{ad_id}` - Fetch ad details
-- `GET /meta-ads/creative/{creative_id}/preview` - Fetch preview
-
----
-
 ## Timeline
 
 **Start:** Jan 31, 17:30 IST | **Demo:** Feb 1, 09:00 IST | **Available:** 15.5 hours
@@ -493,6 +686,42 @@ ORDER BY spend DESC
 | **1** | Grounded reasoning? | CoT complete, metrics match source | Fix prompt, add examples |
 | **2** | Actionable recs? | Cites metrics, shows calculation | Simplify prompt |
 | **3** | Live data OK? | Same quality as fixtures | Use fixtures (fallback) |
+
+### Critical Path
+
+```
+NOW (17:30)
+    │
+    ▼ [1h] Minimal setup
+18:30
+    │
+    ▼ [2.5h] Analyze Agent (fixtures)
+21:00
+    │
+    ▼ [0.5h] GATE 1 ← First AI validation
+21:30
+    │
+    ▼ [2h] Recommend Agent
+23:30
+    │
+    ▼ [0.5h] GATE 2 ← Second AI validation
+00:00 (Feb 1)
+    │
+    ▼ [1.5h] BigQuery integration
+01:30
+    │
+    ▼ [0.5h] GATE 3 ← Live data or fallback
+02:00
+    │
+    ▼ [5.5h] Execute + Routes + Frontend
+07:30
+    │
+    ▼ [1h] Integration
+08:30
+    │
+    ▼ [0.5h] Buffer
+09:00 DEMO
+```
 
 ---
 
@@ -540,35 +769,56 @@ ORDER BY spend DESC
 ```
 halo/
 ├── backend/
-│   ├── main.py
+│   ├── main.py                    # FastAPI app
 │   ├── config/
-│   │   ├── settings.py
-│   │   └── session_manager.py
+│   │   ├── __init__.py
+│   │   ├── session_manager.py     # Singleton session service
+│   │   └── settings.py            # Environment config
 │   ├── models/
-│   │   ├── analyze_agent.py
-│   │   ├── recommend_agent.py
-│   │   └── execute_agent.py
+│   │   ├── __init__.py
+│   │   ├── analyze_agent.py       # Analyze Agent
+│   │   ├── recommend_agent.py     # Recommend Agent
+│   │   └── execute_agent.py       # Execute Agent
 │   ├── controllers/
-│   │   ├── base_controller.py
-│   │   └── agatha_controller.py
+│   │   ├── __init__.py
+│   │   ├── base_controller.py     # Common agent flow
+│   │   └── agatha_controller.py   # Orchestrator
 │   ├── routes/
-│   │   ├── auth_routes.py
-│   │   └── agent_routes.py
+│   │   ├── __init__.py
+│   │   ├── auth_routes.py         # Meta OAuth
+│   │   └── agent_routes.py        # Agent endpoints
 │   ├── helpers/
-│   │   ├── tools.py
-│   │   └── validators.py
-│   └── schemas/
+│   │   ├── __init__.py
+│   │   ├── tools.py               # Agent tools (BQ, Meta)
+│   │   └── validators.py          # validate_analyze_output()
+│   ├── fixtures/
+│   │   └── thirdlove_ads.json     # Test data
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── requests.py
+│   │   └── responses.py
+│   ├── pyproject.toml
+│   └── .env.example
 ├── frontend/
-│   └── src/
+│   ├── package.json
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx           # Login
+│   │   │   ├── dashboard/
+│   │   │   └── recommendations/
+│   │   └── components/
+│   └── .env.local.example
 └── docs/
+    ├── implementation-plan.md
+    └── requirements-agatha.md
 ```
 
 ---
 
 ## Key Patterns (from otb-agents)
 
+### Agent Definition
 ```python
-# Agent Definition
 from google.adk.agents import LlmAgent
 from google.adk.tools import FunctionTool
 
@@ -578,8 +828,10 @@ agent = LlmAgent(
     instruction=ANALYZE_AGENT_PROMPT,
     tools=[get_ad_data_tool],
 )
+```
 
-# Controller Pattern
+### Controller Pattern
+```python
 class AgathaController(BaseController):
     async def run_analysis(self, request):
         return await self.run_agent_flow(
@@ -588,17 +840,186 @@ class AgathaController(BaseController):
         )
 ```
 
+### Tool Definition
+```python
+async def get_ad_data(account_id: str, days: int = 30) -> Dict:
+    # Query BigQuery or Meta API
+    ...
+
+get_ad_data_tool = FunctionTool(func=get_ad_data)
+```
+
 ---
 
 ## Model Configuration
 
 ```python
+# config/settings.py
+import os
+
 MODEL_CONFIG = {
-    "provider": os.getenv("AI_PROVIDER", "gemini"),
-    "gemini": {"model": "gemini-2.5-pro"},
-    "openai": {"model": "gpt-4-turbo"},
+    "provider": os.getenv("AI_PROVIDER", "gemini"),  # gemini | openai
+    "gemini": {
+        "model": os.getenv("GEMINI_MODEL", "gemini-2.5-pro"),
+    },
+    "openai": {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
+    }
 }
 ```
+
+---
+
+## Foundational Elements
+
+### Logging (Structured JSON)
+
+```python
+# config/logging_config.py
+import logging
+import json
+from datetime import datetime
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_obj = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+def setup_logging():
+    handler = logging.StreamHandler()
+    handler.setFormatter(JSONFormatter())
+    logging.root.handlers = [handler]
+    logging.root.setLevel(logging.INFO)
+```
+
+### Testing (Unit + Integration)
+
+```
+tests/
+├── unit/
+│   ├── test_classify_spend.py      # Good/bad spend logic
+│   ├── test_analyze_agent.py       # Agent callbacks
+│   └── test_recommend_logic.py     # Recommendation rules
+├── integration/
+│   ├── test_agent_flow.py          # E2E agent execution
+│   ├── test_bigquery_connector.py  # BQ data retrieval
+│   └── test_api_endpoints.py       # FastAPI routes
+└── conftest.py                     # Shared fixtures
+
+# Run: pytest tests/ -v --cov=backend
+```
+
+**Test Strategy:**
+- Unit tests: Mock LLM responses, test business logic
+- Integration tests: Use `AsyncMock` for agent execution
+- Fixtures: Pre-loaded test data from BigQuery exports
+
+### Observability (OpenTelemetry + Google ADK)
+
+```python
+# config/observability.py
+from fi_instrumentation import register
+from fi_instrumentation.fi_types import ProjectType
+from traceai_google_adk import GoogleADKInstrumentor
+import os
+
+def setup_observability():
+    trace_provider = register(
+        project_type=ProjectType.OBSERVE,
+        project_name=os.getenv("FI_PROJECT_NAME", "agatha")
+    )
+    GoogleADKInstrumentor().instrument(tracer_provider=trace_provider)
+    return trace_provider
+```
+
+**Traces captured:**
+- Agent execution (via ADK instrumentation)
+- Tool calls (BQ queries, Meta API)
+- Request/response at API level
+
+---
+
+## Deployment (Cloud Run - GCP)
+
+### cloudbuild.yaml
+```yaml
+steps:
+  # Build backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/agatha-backend', './backend']
+
+  # Build frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/agatha-frontend', './frontend']
+
+  # Deploy backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'agatha-backend'
+      - '--image=gcr.io/$PROJECT_ID/agatha-backend'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+
+  # Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'agatha-frontend'
+      - '--image=gcr.io/$PROJECT_ID/agatha-frontend'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+```
+
+### Dockerfiles
+
+**Backend:**
+```dockerfile
+# backend/Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY pyproject.toml .
+RUN pip install .
+COPY . .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+**Frontend:**
+```dockerfile
+# frontend/Dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+CMD ["npm", "start"]
+```
+
+### Environment Variables (Cloud Run)
+- `AI_PROVIDER`: gemini | openai
+- `GEMINI_MODEL`: gemini-2.5-pro
+- `GOOGLE_CLOUD_PROJECT`: GCP project ID
+- `META_APP_ID`: Meta app credentials
+- `META_APP_SECRET`: Meta app secret
+- `FI_PROJECT_NAME`: Observability project name
 
 ---
 
@@ -606,10 +1027,12 @@ MODEL_CONFIG = {
 
 | Risk | Mitigation |
 |------|------------|
-| Meta API complexity | BigQuery as primary, Meta for demo |
-| Time pressure | Minimal UI, shadcn components |
+| Meta API complexity | Use BigQuery as primary for dev, Meta for demo |
+| Time pressure | Minimal UI, use component library (shadcn) |
 | Integration bugs | Buffer time, fallback demo script |
 | OAuth issues | Pre-authenticate test account |
+| Cloud Run cold start | Keep backend warm with health checks |
+| Secret management | Use GCP Secret Manager |
 | LLM hallucination | Validation layer + retry logic |
 | Unexplainable decisions | CoT required in all outputs |
 
@@ -626,21 +1049,30 @@ Before demo:
 - [ ] User explanations cite specific numbers
 - [ ] Edge cases handled (borderline thresholds, zero ROAS, new ads)
 - [ ] Graceful degradation works after 2 retry failures
+- [ ] Meta OAuth flow works (for demo)
 
 ---
 
-## Decisions Made
+## Dependencies Between Tasks
 
-| Decision | Choice |
-|----------|--------|
-| Team split | Both fullstack, split by feature |
-| Data source | Meta (demo) + BigQuery (dev/fallback) |
-| AI Model | Config-driven (Gemini/OpenAI) |
-| Execute actions | Mock for hackathon |
-| Classification | AI-first (LLM reasons, Python validates) |
+```
+P1-1 (minimal setup)
+    │
+    └── P1-2 (mock data tool)
+           │
+           └── P1-3 (Analyze Agent) ──► GATE 1
+                  │
+                  └── P1-5 (Recommend Agent) ──► GATE 2
+                         │
+                         ├── P2-1 (BigQuery tool) ──► GATE 3
+                         │
+                         └── P3-1 (Execute Agent)
+                                │
+                                └── P3-2 (FastAPI routes)
+                                       │
+                                       └── P4-1 (Frontend)
+                                              │
+                                              └── P4-2 (Integration)
+```
 
-## Open Questions
-
-| Question | Owner | Status |
-|----------|-------|--------|
-| Demo scenario/script? | Jaidev | TL account showing $88k TikTok waste |
+**Key insight:** Agents are validated with mock data BEFORE building data connectors or infrastructure. Gates ensure we don't build infra for broken AI.

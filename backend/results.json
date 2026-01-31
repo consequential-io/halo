@@ -1,0 +1,566 @@
+{
+  "session_id": "5baf2d79",
+  "analysis": {
+    "session_id": "5baf2d79",
+    "account_avg_roas": 1.6377280657715299,
+    "total_ads": 10,
+    "results": [
+      {
+        "ad_name": "Whispering Homes",
+        "metrics": {
+          "spend": 426496.13560000015,
+          "roas": 8.116844670214636,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 426496.13560000015,
+            "roas": 8.116844670214636,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "8.116844670214636 / 1.6377280657715299 = 4.95\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "GOOD",
+            "reason": "ROAS is 4.95x account average and spend exceeds $1k and days active is greater than 7"
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "High spend, long duration, and ROAS significantly above average makes this a strong signal."
+          }
+        },
+        "classification": "GOOD",
+        "recommended_action": "SCALE",
+        "confidence": "HIGH",
+        "user_explanation": "With a ROAS of 8.12, this ad is performing exceptionally well, generating 4.95x the average account ROAS of 1.64. Given the substantial spend of $426k over 77 days, scaling this ad is recommended."
+      },
+      {
+        "ad_name": "Modern & Vintage Wall Lights",
+        "metrics": {
+          "spend": 368906.0367,
+          "roas": 0.8813813563544756,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 368906.0367,
+            "roas": 0.8813813563544756,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "0.8813813563544756 / 1.6377280657715299 = 0.54\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "WARNING",
+            "reason": "ROAS is 0.54\u00d7 account average with high spend"
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "High spend and long duration gives strong signal"
+          }
+        },
+        "classification": "WARNING",
+        "recommended_action": "REVIEW",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 0.88 is 0.54\u00d7 the account average of 1.64 with a spend of $368k. Review the ad's targeting and creative."
+      },
+      {
+        "ad_name": "083125 WH VideoCatalogue Products WH AllPendant-Lights Sale-Offer Inhouse CP Pendant-Lights Offer",
+        "metrics": {
+          "spend": 248139.11019999994,
+          "roas": 3.912576376656163,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 248139.11019999994,
+            "roas": 3.912576376656163,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "3.912576376656163 / 1.6377280657715299 = 2.39\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "GOOD",
+            "reason": "ROAS is 2.39\u00d7 account average which exceeds 2\u00d7 threshold. High spend and sufficient days active."
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "High ROAS, spend, and days active provide a strong signal."
+          }
+        },
+        "classification": "GOOD",
+        "recommended_action": "SCALE",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 3.91 is 2.39\u00d7 the account average of 1.64. Given the $248k spend over 77 days, consider scaling this ad."
+      },
+      {
+        "ad_name": "Hanging lights for bedroom",
+        "metrics": {
+          "spend": 202417.1278,
+          "roas": 1.2119937088940356,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 202417.1278,
+            "roas": 1.2119937088940356,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "1.2119937088940356 / 1.6377280657715299 = 0.74\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "WARNING",
+            "reason": "ROAS of 1.21 is 0.74\u00d7 account average, and spend is over $10k with 77 active days."
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "Large amount of spend over a long duration makes signal strong."
+          }
+        },
+        "classification": "WARNING",
+        "recommended_action": "REVIEW",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 1.21 is 0.74\u00d7 the account average of 1.64, but spend is $202k over 77 days. Review urgently."
+      },
+      {
+        "ad_name": "Buy Table Lamps Online",
+        "metrics": {
+          "spend": 189473.3429,
+          "roas": 0.8095868576085593,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 189473.3429,
+            "roas": 0.8095868576085593,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "0.8095868576085593 / 1.6377280657715299 = 0.49\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "BAD",
+            "reason": "ROAS is 0.49\u00d7 account average and spend exceeds $10k"
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "Clear negative signal after significant spend and time."
+          }
+        },
+        "classification": "BAD",
+        "recommended_action": "REDUCE",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, and spend is $189k, so reduce or pause this ad."
+      },
+      {
+        "ad_name": "111925 WH Carousel Collection WH Home-Heritage Sale-Offer Inhouse CP multi-pdp-carousel Offer",
+        "metrics": {
+          "spend": 184884.16,
+          "roas": 1.240373164748132,
+          "days_active": 74,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 184884.16,
+            "roas": 1.240373164748132,
+            "days": 74
+          },
+          "comparison": {
+            "roas_ratio": "1.240373164748132 / 1.6377280657715299 = 0.76\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "WARNING",
+            "reason": "ROAS of 0.76\u00d7 avg with high spend"
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "Significant spend and duration"
+          }
+        },
+        "classification": "WARNING",
+        "recommended_action": "REVIEW",
+        "confidence": "HIGH",
+        "user_explanation": "ROAS of 1.24 is 0.76\u00d7 the account average of 1.64, with a high spend of $184.9k. Review this ad."
+      },
+      {
+        "ad_name": "071525 WH VideoCatalogue Collection WH Wall-Lights Offer Inhouse CP Wall-Lights Offer",
+        "metrics": {
+          "spend": 176090.85150000005,
+          "roas": 3.479616062160956,
+          "days_active": 77,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 176090.85150000005,
+            "roas": 3.479616062160956,
+            "days": 77
+          },
+          "comparison": {
+            "roas_ratio": "3.479616062160956 / 1.6377280657715299 = 2.12\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "GOOD",
+            "reason": "ROAS is 2.12\u00d7 account average, spend is over $1k, and ad has been active for 77 days."
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "High spend, long duration, and significantly above average ROAS."
+          }
+        },
+        "classification": "GOOD",
+        "recommended_action": "SCALE",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 3.48 is 2.12\u00d7 the account average of 1.64. With a high spend of $176k and 77 days active, this ad is performing well and should be scaled."
+      },
+      {
+        "ad_name": "010726 WH Video 2026TableLamps WH Version2026 Video Inhouse CP TableLamps N/A",
+        "metrics": {
+          "spend": 144971.4903,
+          "roas": 1.0498409955367618,
+          "days_active": 25,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 144971.4903,
+            "roas": 1.0498409955367618,
+            "days": 25
+          },
+          "comparison": {
+            "roas_ratio": "1.0498409955367618 / 1.6377280657715299 = 0.64\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "WARNING",
+            "reason": "ROAS is 0.64\u00d7 account average and spend is greater than $10k."
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "Significant spend and duration provide a strong signal."
+          }
+        },
+        "classification": "WARNING",
+        "recommended_action": "REVIEW",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 1.05 is 0.64\u00d7 the account average of 1.64, and the ad has spent $144.9k over 25 days. This warrants a review."
+      },
+      {
+        "ad_name": "062725 WH Static Lifestyle WH Pendant-Lights Offer Inhouse  LookBook WH Offer",
+        "metrics": {
+          "spend": 136046.35950000002,
+          "roas": 0.21225032708060074,
+          "days_active": 67,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 136046.35950000002,
+            "roas": 0.21225032708060074,
+            "days": 67
+          },
+          "comparison": {
+            "roas_ratio": "0.21225032708060074 / 1.6377280657715299 = 0.13\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "BAD",
+            "reason": "ROAS is 0.13x account average with spend >= $10k and days >= 7"
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "Clear underperformance with significant spend and duration"
+          }
+        },
+        "classification": "BAD",
+        "recommended_action": "REDUCE",
+        "confidence": "HIGH",
+        "user_explanation": "ROAS of 0.21 is significantly below the account average of 1.64, representing 0.13\u00d7 return. Reduce or pause this ad."
+      },
+      {
+        "ad_name": "120225 WH PartnershipVideo BerriesChristmas WH ChristmasSale InstaReels Inhouse Homepage WH Trending Audio",
+        "metrics": {
+          "spend": 133308.84949999998,
+          "roas": 0.8105248664905775,
+          "days_active": 25,
+          "account_avg_roas": 1.6377280657715299
+        },
+        "chain_of_thought": {
+          "data_extracted": {
+            "spend": 133308.84949999998,
+            "roas": 0.8105248664905775,
+            "days": 25
+          },
+          "comparison": {
+            "roas_ratio": "0.8105248664905775 / 1.6377280657715299 = 0.49\u00d7"
+          },
+          "qualification": {
+            "spend_ok": true,
+            "days_ok": true
+          },
+          "classification_logic": {
+            "result": "BAD",
+            "reason": "ROAS is 0.49x of average, spend exceeds $10k, and days active exceeds 7."
+          },
+          "confidence_rationale": {
+            "level": "HIGH",
+            "reason": "ROAS is significantly below average with high spend and duration."
+          }
+        },
+        "classification": "BAD",
+        "recommended_action": "REDUCE",
+        "confidence": "HIGH",
+        "user_explanation": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, with substantial spend of $133k over 25 days. Reduce budget significantly or pause the ad."
+      }
+    ],
+    "summary": {
+      "GOOD": 3,
+      "WARNING": 4,
+      "BAD": 3
+    }
+  },
+  "recommendations": {
+    "session_id": "5baf2d79",
+    "total_recommendations": 10,
+    "actionable_count": 6,
+    "recommendations": [
+      {
+        "ad_name": "Whispering Homes",
+        "action": "SCALE",
+        "current_spend": 426496.13560000015,
+        "change_percentage": 100,
+        "proposed_new_spend": 852992.2712000003,
+        "expected_impact": {
+          "calculation": "$426,496 increase \u00d7 8.12 ROAS = $3,461,199 expected revenue",
+          "estimated_revenue_change": 3461199
+        },
+        "confidence": "HIGH",
+        "rationale": "ROAS of 8.12 is 4.95\u00d7 account average (1.64). Strong performer with proven returns."
+      },
+      {
+        "ad_name": "Modern & Vintage Wall Lights",
+        "action": "REVIEW",
+        "current_spend": 368906.0367,
+        "change_percentage": 0,
+        "proposed_new_spend": 368906.0367,
+        "expected_impact": {
+          "calculation": "No budget change",
+          "estimated_revenue_change": 0
+        },
+        "confidence": "HIGH",
+        "rationale": "ROAS of 0.88 is 0.54\u00d7 the account average of 1.64. Review the ad's targeting and creative."
+      },
+      {
+        "ad_name": "083125 WH VideoCatalogue Products WH AllPendant-Lights Sale-Offer Inhouse CP Pendant-Lights Offer",
+        "action": "SCALE",
+        "current_spend": 248139.11019999994,
+        "change_percentage": 50,
+        "proposed_new_spend": 372208.6653,
+        "expected_impact": {
+          "calculation": "$124,069 increase \u00d7 3.91 ROAS = $485,210 expected revenue",
+          "estimated_revenue_change": 485210
+        },
+        "confidence": "HIGH",
+        "rationale": "ROAS of 3.91 is 2.39\u00d7 the account average of 1.64. Given the $248k spend over 77 days, consider scaling this ad."
+      },
+      {
+        "ad_name": "Hanging lights for bedroom",
+        "action": "REVIEW",
+        "current_spend": 202417.1278,
+        "change_percentage": 0,
+        "proposed_new_spend": 202417.1278,
+        "expected_impact": {
+          "calculation": "No budget change",
+          "estimated_revenue_change": 0
+        },
+        "confidence": "HIGH",
+        "rationale": "The ROAS of 1.21 is 0.74\u00d7 the account average of 1.64, but spend is $202k over 77 days. Review urgently."
+      },
+      {
+        "ad_name": "Buy Table Lamps Online",
+        "action": "REDUCE",
+        "current_spend": 189473.3429,
+        "change_percentage": 50,
+        "proposed_new_spend": 94736.67145,
+        "expected_impact": {
+          "calculation": "$94,737 decrease \u00d7 0.81 ROAS = $76,700 reduction in revenue",
+          "estimated_revenue_change": -76700
+        },
+        "confidence": "HIGH",
+        "rationale": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, and spend is $189k, so reduce or pause this ad."
+      },
+      {
+        "ad_name": "111925 WH Carousel Collection WH Home-Heritage Sale-Offer Inhouse CP multi-pdp-carousel Offer",
+        "action": "REVIEW",
+        "current_spend": 184884.16,
+        "change_percentage": 0,
+        "proposed_new_spend": 184884.16,
+        "expected_impact": {
+          "calculation": "No budget change",
+          "estimated_revenue_change": 0
+        },
+        "confidence": "HIGH",
+        "rationale": "ROAS of 1.24 is 0.76\u00d7 the account average of 1.64, with a high spend of $184.9k. Review this ad."
+      },
+      {
+        "ad_name": "071525 WH VideoCatalogue Collection WH Wall-Lights Offer Inhouse CP Wall-Lights Offer",
+        "action": "SCALE",
+        "current_spend": 176090.85150000005,
+        "change_percentage": 50,
+        "proposed_new_spend": 264136.27725000004,
+        "expected_impact": {
+          "calculation": "$88,045 increase \u00d7 3.48 ROAS = $306,497 expected revenue",
+          "estimated_revenue_change": 306497
+        },
+        "confidence": "HIGH",
+        "rationale": "The ROAS of 3.48 is 2.12\u00d7 the account average of 1.64. With a high spend of $176k and 77 days active, this ad is performing well and should be scaled."
+      },
+      {
+        "ad_name": "010726 WH Video 2026TableLamps WH Version2026 Video Inhouse CP TableLamps N/A",
+        "action": "REVIEW",
+        "current_spend": 144971.4903,
+        "change_percentage": 0,
+        "proposed_new_spend": 144971.4903,
+        "expected_impact": {
+          "calculation": "No budget change",
+          "estimated_revenue_change": 0
+        },
+        "confidence": "HIGH",
+        "rationale": "The ROAS of 1.05 is 0.64\u00d7 the account average of 1.64, and the ad has spent $144.9k over 25 days. This warrants a review."
+      },
+      {
+        "ad_name": "062725 WH Static Lifestyle WH Pendant-Lights Offer Inhouse  LookBook WH Offer",
+        "action": "REDUCE",
+        "current_spend": 136046.35950000002,
+        "change_percentage": 50,
+        "proposed_new_spend": 68023.17975000001,
+        "expected_impact": {
+          "calculation": "$68,023 decrease \u00d7 0.21 ROAS = $14,285 reduction in revenue",
+          "estimated_revenue_change": -14285
+        },
+        "confidence": "HIGH",
+        "rationale": "ROAS of 0.21 is significantly below the account average of 1.64, representing 0.13\u00d7 return. Reduce or pause this ad."
+      },
+      {
+        "ad_name": "120225 WH PartnershipVideo BerriesChristmas WH ChristmasSale InstaReels Inhouse Homepage WH Trending Audio",
+        "action": "REDUCE",
+        "current_spend": 133308.84949999998,
+        "change_percentage": 50,
+        "proposed_new_spend": 66654.42474999999,
+        "expected_impact": {
+          "calculation": "$66,654 decrease \u00d7 0.81 ROAS = $54,024 reduction in revenue",
+          "estimated_revenue_change": -54024
+        },
+        "confidence": "HIGH",
+        "rationale": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, with substantial spend of $133k over 25 days. Reduce budget significantly or pause the ad."
+      }
+    ],
+    "total_spend_change": 409196.84050000005,
+    "total_expected_revenue": 4107897
+  },
+  "execution": {
+    "session_id": "5baf2d79",
+    "executed": [
+      {
+        "ad_name": "Whispering Homes",
+        "action_taken": "SCALED",
+        "old_budget": 426496.13560000015,
+        "new_budget": 852992.2712000003,
+        "status": "MOCK",
+        "message": "[MOCK] Budget increased by $426,496 ($426,496 \u2192 $852,992)",
+        "rationale": "ROAS of 8.12 is 4.95\u00d7 account average (1.64). Strong performer with proven returns."
+      },
+      {
+        "ad_name": "083125 WH VideoCatalogue Products WH AllPendant-Lights Sale-Offer Inhouse CP Pendant-Lights Offer",
+        "action_taken": "SCALED",
+        "old_budget": 248139.11019999994,
+        "new_budget": 372208.6653,
+        "status": "MOCK",
+        "message": "[MOCK] Budget increased by $124,070 ($248,139 \u2192 $372,209)",
+        "rationale": "ROAS of 3.91 is 2.39\u00d7 the account average of 1.64. Given the $248k spend over 77 days, consider scaling this ad."
+      },
+      {
+        "ad_name": "Buy Table Lamps Online",
+        "action_taken": "REDUCED",
+        "old_budget": 189473.3429,
+        "new_budget": 94736.67145,
+        "status": "MOCK",
+        "message": "[MOCK] Budget reduced by $94,737 ($189,473 \u2192 $94,737)",
+        "rationale": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, and spend is $189k, so reduce or pause this ad."
+      },
+      {
+        "ad_name": "071525 WH VideoCatalogue Collection WH Wall-Lights Offer Inhouse CP Wall-Lights Offer",
+        "action_taken": "SCALED",
+        "old_budget": 176090.85150000005,
+        "new_budget": 264136.27725000004,
+        "status": "MOCK",
+        "message": "[MOCK] Budget increased by $88,045 ($176,091 \u2192 $264,136)",
+        "rationale": "The ROAS of 3.48 is 2.12\u00d7 the account average of 1.64. With a high spend of $176k and 77 days active, this ad is performing well and should be scaled."
+      },
+      {
+        "ad_name": "062725 WH Static Lifestyle WH Pendant-Lights Offer Inhouse  LookBook WH Offer",
+        "action_taken": "REDUCED",
+        "old_budget": 136046.35950000002,
+        "new_budget": 68023.17975000001,
+        "status": "MOCK",
+        "message": "[MOCK] Budget reduced by $68,023 ($136,046 \u2192 $68,023)",
+        "rationale": "ROAS of 0.21 is significantly below the account average of 1.64, representing 0.13\u00d7 return. Reduce or pause this ad."
+      },
+      {
+        "ad_name": "120225 WH PartnershipVideo BerriesChristmas WH ChristmasSale InstaReels Inhouse Homepage WH Trending Audio",
+        "action_taken": "REDUCED",
+        "old_budget": 133308.84949999998,
+        "new_budget": 66654.42474999999,
+        "status": "MOCK",
+        "message": "[MOCK] Budget reduced by $66,654 ($133,309 \u2192 $66,654)",
+        "rationale": "The ROAS of 0.81 is only 0.49\u00d7 the account average of 1.64, with substantial spend of $133k over 25 days. Reduce budget significantly or pause the ad."
+      }
+    ],
+    "summary": "[MOCK] Executed 6 actions (3 scaled, 3 reduced). Net effect: +$409,197 in spend",
+    "timestamp": "2026-01-31T16:33:46.650943",
+    "mock_mode": true
+  }
+}
