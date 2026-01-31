@@ -1,6 +1,6 @@
 # Agatha - Ad Spend Optimization Agent
 
-## Requirements Document v1.2
+## Requirements Document v1.3
 
 | Field | Value |
 |-------|-------|
@@ -192,6 +192,12 @@ Marketing teams make suboptimal ad spend decisions because:
 ### Multi-Agent Architecture
 
 ```
+                    ┌─────────────┐
+                    │  Meta OAuth │
+                    │   (Login)   │
+                    └──────┬──────┘
+                           │
+                           ▼
 ┌─────────────────────────────────────────────────────────┐
 │                      AGATHA                              │
 │                   (Orchestrator)                         │
@@ -205,10 +211,13 @@ Marketing teams make suboptimal ad spend decisions because:
 └───────────┘   └───────────┘   └───────────┘
      │                               │
      ▼                               ▼
-┌───────────┐                 ┌───────────┐
-│ BigQuery  │                 │ Meta API  │
-│ Data      │                 │ (Write)   │
-└───────────┘                 └───────────┘
+┌───────────────────┐         ┌───────────┐
+│ Meta API (Read)   │         │ Meta API  │
+│ PRIMARY - 30 days │         │ (Mock Write) │
+├───────────────────┤         └───────────┘
+│ BigQuery          │
+│ FALLBACK - test   │
+└───────────────────┘
 ```
 
 ### Agent Specifications
@@ -216,10 +225,23 @@ Marketing teams make suboptimal ad spend decisions because:
 #### Analyze Agent
 | Attribute | Value |
 |-----------|-------|
-| **Input** | Ad performance data from BigQuery/API |
+| **Input** | Ad performance data (see Data Sources below) |
 | **Output** | Structured analysis with spend classification |
 | **Actions** | Read-only |
 | **Key Metrics** | ROAS, CPA, CTR, Conversion Rate, Frequency, Creative Performance |
+
+**Data Sources (Priority Order):**
+
+| Priority | Source | Use Case | Data Range |
+|----------|--------|----------|------------|
+| **Primary** | Meta Ads API | Live demo - login via OAuth, pull real data | 1 month historical |
+| **Fallback** | BigQuery | Testing & demo backup if Meta fails | Pre-loaded test data |
+
+**Demo Flow:**
+1. User authenticates via Meta OAuth
+2. Analyze Agent calls Meta Marketing API
+3. Pulls last 30 days of ad performance data
+4. If Meta API fails → fallback to BigQuery test data
 
 #### Recommend Agent
 | Attribute | Value |
