@@ -1,6 +1,6 @@
 # Agatha - Ad Spend Optimization Agent
 
-## Requirements Document v1.0
+## Requirements Document v1.1
 
 | Field | Value |
 |-------|-------|
@@ -92,21 +92,65 @@ Marketing teams make suboptimal ad spend decisions because:
 
 **How do we know if we've solved this problem?**
 
-### Demo Success Criteria (Hackathon)
+### Demo Success Metrics (Hackathon)
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| Identify "good" spend opportunities | At least 1 recommendation to increase spend | TBD |
-| Identify "bad" spend (wasteful) | At least 1 recommendation to pause/reduce | TBD |
-| Suggest creative refresh | At least 1 creative recommendation | TBD |
-| Execute a change via API | Successfully modify 1 campaign setting | TBD |
-| End-to-end flow works | User can login, analyze, approve, execute | TBD |
+**Approach:** "Money Found" + Full Loop Demo
+- Lead with dramatic $ number, then show the workflow that found it
+- Hybrid execution: Real read (pull data), mock write (simulate execution)
 
-### Product Success Criteria (Post-Hackathon)
+#### Must-Have (Demo Fails Without These)
 
-- Reduce time-to-insight from 48 hours to < 1 hour
-- Surface actionable recommendations within minutes of data refresh
-- Enable execution of changes without leaving the platform
+| # | Metric | Target | How to Verify |
+|---|--------|--------|---------------|
+| D1 | Identify scaling opportunity | ≥ 1 "good spend" recommendation | Shows $ amount + reasoning |
+| D2 | Identify waste | ≥ 1 "bad spend" recommendation | Shows $ amount + reasoning |
+| D3 | Full agent loop | Analyze → Recommend → Execute | All 3 agents fire in sequence |
+| D4 | Human approval UI | Working approve/reject | Buttons trigger execution |
+| D5 | Mock execution confirmation | Shows "Campaign paused" or "Budget increased" | Confirmation message displayed |
+
+#### Should-Have (Strengthens Demo)
+
+| # | Metric | Target | How to Verify |
+|---|--------|--------|---------------|
+| D6 | Real data pull | Live BigQuery or Meta read | Shows fresh data, not hardcoded |
+| D7 | Time-to-insight | < 60 seconds from login | Stopwatch during demo |
+| D8 | Creative recommendation | ≥ 1 "refresh creative" suggestion | Shows fatigued ad flagged |
+
+#### Nice-to-Have (Wow Factor)
+
+| # | Metric | Target | How to Verify |
+|---|--------|--------|---------------|
+| D9 | Multi-account view | Show 2 brands (TL + WH) | Dropdown to switch |
+| D10 | Total $ impact summary | "Agatha found $X in opportunities" | Single headline number |
+
+### Product Success Metrics (Post-Hackathon)
+
+**Focus:** ROI + Recommendation Accuracy
+
+#### Primary (ROI-Focused)
+
+| # | Metric | Target | How to Measure |
+|---|--------|--------|----------------|
+| P1 | $ waste prevented | Track monthly | Sum of paused/reduced bad spend |
+| P2 | $ scaled into winners | Track monthly | Sum of increased good spend |
+| P3 | ROAS lift | +15% in 30 days | Before/after avg ROAS comparison |
+| P4 | Payback period | < 1 month | (Subscription cost) / ($ optimized) |
+
+#### Supporting (Trust & Adoption)
+
+| # | Metric | Target | How to Measure |
+|---|--------|--------|----------------|
+| P5 | Recommendation accuracy | 80%+ approval | Approved / Total recommendations |
+| P6 | False positive rate | < 10% | User overrides "bad spend" call |
+
+### Example Pitch Numbers (Based on Validated Data)
+
+| Brand | $ Waste Found | $ Scale Opportunity | Potential Impact |
+|-------|---------------|---------------------|------------------|
+| TL | $88k (TikTok @ 0 ROAS) | $212k → scale 30% = +$64k | $152k optimized |
+| WH | ₹55k (Floor Lamps @ 0 ROAS) | ₹426k → scale 30% = +₹128k | ₹183k optimized |
+
+**Pitch headline:** *"Agatha identified $150k+ in optimization opportunities in under 60 seconds"*
 
 ---
 
@@ -265,9 +309,9 @@ Marketing teams make suboptimal ad spend decisions because:
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
-| 1 | What fields are available in BigQuery test data? | Jaidev | OPEN |
-| 2 | What defines "good" spend? (ROAS > X? CPA < Y?) | Jaidev | OPEN |
-| 3 | What defines "bad" spend? (Zero conversions? ROAS < 1?) | Jaidev | OPEN |
+| 1 | What fields are available in BigQuery test data? | Jaidev | RESOLVED - see brainstorm doc |
+| 2 | What defines "good" spend? (ROAS > X? CPA < Y?) | Jaidev | RESOLVED - ROAS ≥ 2× avg, spend ≥ $1k, ≥ 7 days |
+| 3 | What defines "bad" spend? (Zero conversions? ROAS < 1?) | Jaidev | RESOLVED - ROAS = 0 after $5k+/7d, or < 0.5× avg |
 | 4 | What Execute actions are possible via Meta API? | Hemanth | OPEN |
 
 ### Important (Affect scope)
