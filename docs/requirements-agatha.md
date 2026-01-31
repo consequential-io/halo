@@ -1,6 +1,6 @@
 # Agatha - Ad Spend Optimization Agent
 
-## Requirements Document v1.1
+## Requirements Document v1.2
 
 | Field | Value |
 |-------|-------|
@@ -243,8 +243,47 @@ Marketing teams make suboptimal ad spend decisions because:
 |------|--------|------------|
 | **Scale Winner** | Increase budget on high-ROAS campaigns | Yes |
 | **Cut Loser** | Pause/reduce budget on wasteful spend | Yes |
-| **Refresh Creative** | Flag creative fatigue, suggest refresh | Manual (suggestion only) |
+| **Refresh Creative** | Flag creative fatigue + actionable suggestions | Manual (suggestion only) |
 | **Fix Frequency** | Reduce budget when frequency too high | Yes |
+
+### Creative Recommendation Levels
+
+| Level | Description | Scope |
+|-------|-------------|-------|
+| 1. Flag only | "This creative is underperforming" | - |
+| 2. Flag + reason | "High frequency (5x avg) causing fatigue" | - |
+| **3. Flag + actionable suggestion** | "Refresh headline, try shorter video, test new CTA" | **Hackathon** |
+| 4. AI-generated creative | Generate new ad copy/image suggestions | Product roadmap |
+
+#### Creative Fatigue Detection Signals
+
+| Signal | Threshold | Action Suggested |
+|--------|-----------|------------------|
+| High frequency | > 3x account avg | "Audience seeing ad too often - refresh or expand targeting" |
+| CTR decline | > 30% drop over 7 days | "Click-through dropping - test new headline/image" |
+| Rising CPC | > 50% increase over 7 days | "Cost per click rising - creative losing relevance" |
+| Stale runtime | > 30 days same creative | "Creative running 30+ days - test fresh variation" |
+
+#### Example Creative Recommendations (Demo)
+
+```
+CREATIVE REFRESH NEEDED
+
+Ad: "Summer Sale - 50% Off"
+Campaign: TL_US_Prospecting
+Status: Running 45 days, CTR down 35%
+
+Issue: Creative fatigue detected
+- Frequency: 4.2 (3x account average)
+- CTR: 1.2% → 0.78% (down 35% in 14 days)
+- CPC: $0.45 → $0.72 (up 60%)
+
+Suggestions:
+1. Test new headline emphasizing urgency or new benefit
+2. Swap hero image - current image seen 4.2x per user
+3. Try video format (your video ads avg 2x higher CTR)
+4. Refresh CTA: "Shop Now" → "Get My Discount"
+```
 
 ### UI Screens (Minimal for Demo)
 
