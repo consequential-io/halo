@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ads Metrics RCA Workflow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8892b0;
+            margin-bottom: 50px;
+            font-size: 1rem;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.4rem;
+        }
+
+        .step-1 .step-number { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .step-2 .step-number { background: linear-gradient(135deg, #4ecdc4, #44a3aa); }
+        .step-3 .step-number { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+        .step-4 .step-number { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .step-desc {
+            color: #8892b0;
+            font-size: 0.9rem;
+        }
+
+        /* Step 1 - Metric Cards */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .metric-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .metric-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .metric-type {
+            font-size: 0.8rem;
+            color: #8892b0;
+        }
+
+        .metric-card.spend { border-left: 4px solid #ff6b6b; }
+        .metric-card.conversions { border-left: 4px solid #4ecdc4; }
+        .metric-card.ctr { border-left: 4px solid #a855f7; }
+        .metric-card.cpa { border-left: 4px solid #f59e0b; }
+        .metric-card.roas { border-left: 4px solid #22c55e; }
+
+        /* Step 2 - Drill Down */
+        .drill-down {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .drill-level {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 8px;
+            padding: 15px 25px;
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .drill-level-name {
+            font-weight: 600;
+            color: #4ecdc4;
+            font-size: 0.9rem;
+        }
+
+        .drill-level-example {
+            font-size: 0.75rem;
+            color: #8892b0;
+            margin-top: 5px;
+        }
+
+        .drill-arrow {
+            color: #4ecdc4;
+            font-size: 1.5rem;
+        }
+
+        /* Step 3 - RCA Checks */
+        .rca-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .rca-check {
+            background: rgba(168, 85, 247, 0.05);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .rca-check-number {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .rca-check-content h4 {
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+
+        .rca-check-content p {
+            font-size: 0.8rem;
+            color: #8892b0;
+            line-height: 1.4;
+        }
+
+        .rca-query {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.7rem;
+            color: #22c55e;
+        }
+
+        /* Step 4 - Actions */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .action-card {
+            background: rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .action-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .action-icon {
+            font-size: 1.2rem;
+        }
+
+        .action-cause {
+            font-size: 0.85rem;
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .action-recommendation {
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+        }
+
+        /* Connector lines */
+        .connector {
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .connector-line {
+            width: 3px;
+            height: 30px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+            border-radius: 3px;
+        }
+
+        /* Final output */
+        .output-box {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .output-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #22c55e;
+            margin-bottom: 15px;
+        }
+
+        .output-example {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: left;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .output-example .highlight {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .output-example .metric-val {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        .output-example .action-val {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Ads Metrics RCA Workflow</h1>
+        <p class="subtitle">Automated Root Cause Analysis for Falling Ad Performance</p>
+
+        <div class="flow-container">
+            <!-- Step 1 -->
+            <div class="step step-1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div>
+                        <div class="step-title">Classify the Problem</div>
+                        <div class="step-desc">Which metric triggered the anomaly?</div>
+                    </div>
+                </div>
+                <div class="metric-grid">
+                    <div class="metric-card spend">
+                        <div class="metric-icon">📉</div>
+                        <div class="metric-name">Spend ↓</div>
+                        <div class="metric-type">Delivery Problem</div>
+                    </div>
+                    <div class="metric-card conversions">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-name">Conversions ↓</div>
+                        <div class="metric-type">Funnel Problem</div>
+                    </div>
+                    <div class="metric-card ctr">
+                        <div class="metric-icon">👆</div>
+                        <div class="metric-name">CTR ↓</div>
+                        <div class="metric-type">Creative/Audience</div>
+                    </div>
+                    <div class="metric-card cpa">
+                        <div class="metric-icon">💸</div>
+                        <div class="metric-name">CPA ↑</div>
+                        <div class="metric-type">Efficiency Problem</div>
+                    </div>
+                    <div class="metric-card roas">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-name">ROAS ↓</div>
+                        <div class="metric-type">Revenue Problem</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Step 2 -->
+            <div class="step step-2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div>
+                        <div class="step-title">Isolate Location</div>
+                        <div class="step-desc">Drill down dimensions to find the largest contributor</div>
+                    </div>
+                </div>
+                <div class="drill-down">
+                    <div class="drill-level">
+                        <div class="drill-level-name">Channel</div>
+                        <div class="drill-level-example">Meta / Google / TikTok</div>
+                    </div>
+                    <div class="drill-arrow">→</div>
+                    <div class="drill-level">
+                        <div class="drill-level-name">Campaign Type</div>
+                        <div class="drill-level-example">Prospecting / Retargeting</div>
+                    </div>
+                    <div class="drill-arrow">→</div>
+                    <div class="drill-level">
+                        <div class="drill-level-name">Campaign</div>
+                        <div class="drill-level-example">Summer_Sale_2024</div>
+                    </div>
+                    <div class="drill-arrow">→</div>
+                    <div class="drill-level">
+                        <div class="drill-level-name">Ad Set</div>
+                        <div class="drill-level-example">Lookalike_US_1%</div>
+                    </div>
+                    <div class="drill-arrow">→</div>
+                    <div class="drill-level">
+                        <div class="drill-level-name">Ad / Segment</div>
+                        <div class="drill-level-example">Video_A / Mobile</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Step 3 -->
+            <div class="step step-3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div>
+                        <div class="step-title">Run Diagnostic Checks</div>
+                        <div class="step-desc">Sequential checks to identify root cause</div>
+                    </div>
+                </div>
+                <div class="rca-grid">
+                    <div class="rca-check">
+                        <div class="rca-check-number">1</div>
+                        <div class="rca-check-content">
+                            <h4>Budget Exhausted?</h4>
+                            <p>Daily or lifetime cap reached, limiting delivery</p>
+                            <div class="rca-query">spend / daily_budget > 0.95</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">2</div>
+                        <div class="rca-check-content">
+                            <h4>Bid Cap Too Low?</h4>
+                            <p>Losing auctions to competitors</p>
+                            <div class="rca-query">avg_cpm > bid_cap × 0.9</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">3</div>
+                        <div class="rca-check-content">
+                            <h4>Audience Exhausted?</h4>
+                            <p>High frequency, small audience pool</p>
+                            <div class="rca-query">frequency > 3.5 OR reach/audience_size > 0.8</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">4</div>
+                        <div class="rca-check-content">
+                            <h4>Creative Fatigue?</h4>
+                            <p>CTR declining over consecutive days</p>
+                            <div class="rca-query">ctr_7d_trend < -15%</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">5</div>
+                        <div class="rca-check-content">
+                            <h4>Landing Page Issue?</h4>
+                            <p>CTR stable but CVR crashed</p>
+                            <div class="rca-query">ctr stable AND cvr_change < -30%</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">6</div>
+                        <div class="rca-check-content">
+                            <h4>Tracking Broken?</h4>
+                            <p>Pixel/CAPI not firing, conversion delay</p>
+                            <div class="rca-query">clicks > 0 AND conversions = 0 (48h)</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">7</div>
+                        <div class="rca-check-content">
+                            <h4>CPM Spiked?</h4>
+                            <p>Auction competition increased</p>
+                            <div class="rca-query">cpm_change > 25% (no other changes)</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">8</div>
+                        <div class="rca-check-content">
+                            <h4>Recent Changes?</h4>
+                            <p>Edits to creative, bid, audience in 24-48h</p>
+                            <div class="rca-query">change_log WHERE ts > now() - 48h</div>
+                        </div>
+                    </div>
+                    <div class="rca-check">
+                        <div class="rca-check-number">9</div>
+                        <div class="rca-check-content">
+                            <h4>Seasonality?</h4>
+                            <p>Expected pattern vs last week/year</p>
+                            <div class="rca-query">metric vs metric_7d_ago, metric_364d_ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Step 4 -->
+            <div class="step step-4">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div>
+                        <div class="step-title">Recommended Actions</div>
+                        <div class="step-desc">Each root cause maps to a specific action</div>
+                    </div>
+                </div>
+                <div class="action-grid">
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">💰</span>
+                            <span class="action-cause">Budget Exhausted</span>
+                        </div>
+                        <div class="action-recommendation">Increase budget or redistribute from underperforming campaigns</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">🎯</span>
+                            <span class="action-cause">Bid Too Low</span>
+                        </div>
+                        <div class="action-recommendation">Raise bid cap 15-20% or switch to auto-bidding</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">👥</span>
+                            <span class="action-cause">Audience Exhausted</span>
+                        </div>
+                        <div class="action-recommendation">Expand audience, add lookalikes, or exclude past converters</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">🎨</span>
+                            <span class="action-cause">Creative Fatigue</span>
+                        </div>
+                        <div class="action-recommendation">Refresh creatives, pause worst performers, test new angles</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">🌐</span>
+                            <span class="action-cause">Landing Page</span>
+                        </div>
+                        <div class="action-recommendation">Check page load speed, mobile UX, form functionality</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">🔧</span>
+                            <span class="action-cause">Tracking Broken</span>
+                        </div>
+                        <div class="action-recommendation">Debug pixel/CAPI, check Events Manager, wait for attribution window</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">📈</span>
+                            <span class="action-cause">CPM Spike</span>
+                        </div>
+                        <div class="action-recommendation">Adjust targeting, wait out competition, or shift budget to other channels</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">⏪</span>
+                            <span class="action-cause">Recent Change</span>
+                        </div>
+                        <div class="action-recommendation">Rollback change or monitor for 48h before further action</div>
+                    </div>
+                    <div class="action-card">
+                        <div class="action-card-header">
+                            <span class="action-icon">📅</span>
+                            <span class="action-cause">Seasonality</span>
+                        </div>
+                        <div class="action-recommendation">No action needed - expected behavior, document for future</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Output -->
+            <div class="output-box">
+                <div class="output-title">📋 Generated Alert Output</div>
+                <div class="output-example">
+                    <span class="highlight">🚨 ANOMALY DETECTED</span><br><br>
+                    <strong>Metric:</strong> <span class="metric-val">CPA +47%</span> ($32 → $47)<br>
+                    <strong>Location:</strong> Meta → Prospecting → Summer_Sale → Lookalike_US_1%<br>
+                    <strong>Root Cause:</strong> Creative Fatigue (CTR dropped 23% over 5 days)<br>
+                    <strong>Impact:</strong> $2,400 excess spend in last 72h<br><br>
+                    <span class="action-val">💡 RECOMMENDED ACTION:</span> Pause ad creatives running >7 days, introduce 2-3 new variants
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
