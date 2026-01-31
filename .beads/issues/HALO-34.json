@@ -2,12 +2,17 @@
   "id": "HALO-34",
   "title": "Implement /api/recommendations",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
   "description": "Get recommendations for account.\n\n## Implementation\n```python\n@router.get(\"/recommendations/{session_id}\")\nasync def get_recommendations(session_id: str):\n    # Retrieve recommendations from session state\n    recommendations = await controller.get_session_recommendations(session_id)\n    return {\n        \"session_id\": session_id,\n        \"recommendations\": recommendations,\n        \"total_impact\": sum(r['impact'] for r in recommendations)\n    }\n```\n\n## Response Schema\n```python\nclass Recommendation(BaseModel):\n    id: str\n    action: str  # 'scale' | 'reduce' | 'pause' | 'refresh_creative'\n    campaign_id: str\n    campaign_name: str\n    amount: float  # $ or % change\n    reasoning: str\n    impact: float  # Estimated $ impact\n\nclass RecommendationResponse(BaseModel):\n    session_id: str\n    recommendations: List[Recommendation]\n    total_impact: float\n```",
-  "labels": ["api", "recommendations"],
+  "labels": [
+    "api",
+    "recommendations"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-02-01T04:49:22Z",
   "parent": "HALO-5",
-  "blockedBy": ["HALO-33"]
+  "blockedBy": [
+    "HALO-33"
+  ]
 }

@@ -1,0 +1,12 @@
+{
+  "id": "HALO-63",
+  "title": "Note: z-score discrepancy between fixture and calculated",
+  "type": "task",
+  "status": "closed",
+  "priority": 2,
+  "description": "Documented discrepancy between pre-computed z-scores in fixtures vs calculated z-scores.\n\n## Issue Found\n- Fixtures contain pre-computed `z_cpa`, `z_roas` values\n- These are calculated against historical/platform baselines\n- Our `detect_anomalies` tool calculates z-scores on the fly against current dataset\n- Results differ: z_cpa finds 0 anomalies, raw CPA finds 8 anomalies\n\n## Resolution\n- Manual validation scripts (step 2, 3, 5) use **raw metrics** (CPA, ROAS)\n- This calculates z-scores against the current dataset\n- More appropriate for finding anomalies within the analysis period\n- Pre-computed z-scores still available for reference\n\n## When to Use Each\n| Approach | Use Case |\n|----------|----------|\n| Raw metrics (CPA, ROAS) | Finding anomalies within current dataset |\n| Pre-computed (z_cpa, z_roas) | Comparing to historical/platform baseline |\n\n## Future Enhancement\n- Add option to detect_anomalies to use either approach\n- Document the baseline used for fixture z-scores",
+  "labels": ["documentation", "data-quality", "resolved"],
+  "created": "2026-01-31T16:30:00Z",
+  "updated": "2026-01-31T16:30:00Z",
+  "parent": "HALO-3"
+}

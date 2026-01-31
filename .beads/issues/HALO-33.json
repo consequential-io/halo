@@ -2,12 +2,17 @@
   "id": "HALO-33",
   "title": "Implement /api/analyze",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
   "description": "Trigger analysis, return results.\n\n## Implementation\n```python\nfrom controllers.agatha_controller import AgathaController\nfrom schemas.requests import AnalyzeRequest\nfrom schemas.responses import AnalysisResponse\n\nrouter = APIRouter()\ncontroller = AgathaController()\n\n@router.post(\"/analyze\", response_model=AnalysisResponse)\nasync def analyze(request: AnalyzeRequest):\n    result = await controller.run_full_flow(\n        account_id=request.account_id,\n        access_token=request.access_token\n    )\n    return result\n```\n\n## Request Schema\n```python\nclass AnalyzeRequest(BaseModel):\n    account_id: str\n    access_token: Optional[str] = None  # Use BQ if not provided\n    days: int = 30\n```",
-  "labels": ["api", "analyze"],
+  "labels": [
+    "api",
+    "analyze"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-02-01T04:49:22Z",
   "parent": "HALO-5",
-  "blockedBy": ["HALO-30"]
+  "blockedBy": [
+    "HALO-30"
+  ]
 }

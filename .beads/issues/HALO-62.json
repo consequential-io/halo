@@ -1,0 +1,12 @@
+{
+  "id": "HALO-62",
+  "title": "Gate 1 Manual Validation Scripts",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Created manual validation scripts for Gate 1 testing.\n\n## Scripts Created\n```\ntests/manual/\n├── step1_verify_fixtures.py      # Load TL/WH fixtures, verify structure\n├── step2_detect_anomalies_cpa.py  # Detect high CPA anomalies (TL+WH)\n├── step3_detect_anomalies_roas.py # Detect low ROAS anomalies (TL+WH)\n├── step4_verify_ontology.py       # Test ontology grouping (TL+WH)\n├── step5_verify_rca.py            # Run RCA on anomalies (TL+WH)\n└── run_all_steps.py               # Execute all steps with summary\n```\n\n## Key Findings\n- TL: 128 ads, 8 high CPA anomalies, 3+ low ROAS anomalies\n- WH: Data loaded successfully\n- All 7 ontology dimensions working\n- RCA identifies root causes (engagement, creative, competitive)\n\n## Fix Applied\n- Step 5 updated to use raw metrics (CPA, ROAS) instead of pre-computed z-scores (z_cpa, z_roas)\n- This ensures consistency with step 2/3 which calculate z-scores on the fly\n\n## Usage\n```bash\n# Run individual steps\npython3 tests/manual/step1_verify_fixtures.py\npython3 tests/manual/step2_detect_anomalies_cpa.py\npython3 tests/manual/step3_detect_anomalies_roas.py\npython3 tests/manual/step4_verify_ontology.py\npython3 tests/manual/step5_verify_rca.py\n\n# Run all steps\npython3 tests/manual/run_all_steps.py\n```",
+  "labels": ["testing", "validation", "gate-1", "manual"],
+  "created": "2026-01-31T16:30:00Z",
+  "updated": "2026-01-31T16:30:00Z",
+  "parent": "HALO-7"
+}

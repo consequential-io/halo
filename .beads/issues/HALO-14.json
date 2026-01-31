@@ -2,11 +2,15 @@
   "id": "HALO-14",
   "title": "Create Dockerfiles (backend + frontend)",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 2,
   "description": "Create Dockerfiles for both services.\n\n## backend/Dockerfile\n```dockerfile\nFROM python:3.11-slim\nWORKDIR /app\nCOPY pyproject.toml .\nRUN pip install .\nCOPY . .\nCMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8080\"]\n```\n\n## frontend/Dockerfile\n```dockerfile\nFROM node:20-alpine AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\nFROM node:20-alpine\nWORKDIR /app\nCOPY --from=builder /app/.next ./.next\nCOPY --from=builder /app/node_modules ./node_modules\nCOPY --from=builder /app/package.json ./\nCMD [\"npm\", \"start\"]\n```",
-  "labels": ["scaffolding", "docker", "deployment"],
+  "labels": [
+    "scaffolding",
+    "docker",
+    "deployment"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-02-01T04:49:22Z",
   "parent": "HALO-1"
 }

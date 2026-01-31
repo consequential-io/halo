@@ -34,9 +34,23 @@ class Settings:
     llm_timeout_seconds: float = 30.0
     gemini_api_key: str = ""
 
-    # TODO: Add timezone and currency settings in future iteration
-    # timezone: str = "America/Los_Angeles"
-    # currency_field: str = "1"  # Default to no conversion
+    # Meta OAuth
+    meta_app_id: str = "3719964444932293"
+    meta_app_secret: str = ""
+    meta_redirect_uri: str = ""
+
+    # API Auth
+    api_token: str = ""
+
+    # GCS Logging
+    gcs_bucket: str = "halo-logs"
+    gcs_execution_path: str = "executions"
+
+    # Frontend
+    frontend_url: str = "http://localhost:5173"
+
+    # Server
+    environment: str = "development"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -52,6 +66,14 @@ class Settings:
             enable_llm_reasoning=os.getenv("ENABLE_LLM_REASONING", "true").lower() == "true",
             llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
             gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+            meta_app_id=os.getenv("META_APP_ID", "3719964444932293"),
+            meta_app_secret=os.getenv("META_APP_SECRET", ""),
+            meta_redirect_uri=os.getenv("META_REDIRECT_URI", ""),
+            api_token=os.getenv("API_TOKEN", ""),
+            gcs_bucket=os.getenv("GCS_BUCKET", "halo-logs"),
+            gcs_execution_path=os.getenv("GCS_EXECUTION_PATH", "executions"),
+            frontend_url=os.getenv("FRONTEND_URL", "http://localhost:5173"),
+            environment=os.getenv("ENVIRONMENT", "development"),
         )
 
 

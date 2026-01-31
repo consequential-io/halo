@@ -2,12 +2,18 @@
   "id": "HALO-16",
   "title": "Implement config/settings.py",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
   "description": "Implement Pydantic Settings with env vars.\n\n## Pattern\n```python\nfrom pydantic_settings import BaseSettings\n\nclass Settings(BaseSettings):\n    ai_provider: str = \"gemini\"\n    gemini_model: str = \"gemini-2.5-pro\"\n    openai_model: str = \"gpt-4-turbo\"\n    google_cloud_project: str\n    bq_dataset: str\n    meta_app_id: str\n    meta_app_secret: str\n    environment: str = \"development\"\n    log_level: str = \"INFO\"\n\n    class Config:\n        env_file = \".env\"\n\nsettings = Settings()\n```",
-  "labels": ["backend", "foundation", "config"],
+  "labels": [
+    "backend",
+    "foundation",
+    "config"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-02-01T03:30:00Z",
   "parent": "HALO-2",
-  "blockedBy": ["HALO-8"]
+  "blockedBy": [
+    "HALO-8"
+  ]
 }

@@ -1,0 +1,67 @@
+substitutions:
+  _REGION: us-central1
+  _BACKEND_SERVICE: halo-backend
+  _FRONTEND_SERVICE: halo-frontend
+  _FRONTEND_DOMAIN: adspend.consequential.io
+  _BACKEND_URL: https://halo-backend-zqlsaqunba-uc.a.run.app
+
+steps:
+  # Build backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/${_BACKEND_SERVICE}', './backend']
+
+  # Build frontend with backend URL
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_URL=${_BACKEND_URL}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_FRONTEND_SERVICE}'
+      - './frontend'
+
+  # Push backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/${_BACKEND_SERVICE}']
+
+  # Push frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/${_FRONTEND_SERVICE}']
+
+  # Deploy backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_BACKEND_SERVICE}'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/${_BACKEND_SERVICE}'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production,DATA_SOURCE=bq,GCP_PROJECT=$PROJECT_ID,META_REDIRECT_URI=${_BACKEND_URL}/auth/meta/callback,FRONTEND_URL=https://${_FRONTEND_DOMAIN}'
+
+  # Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_FRONTEND_SERVICE}'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/${_FRONTEND_SERVICE}'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+images:
+  - 'gcr.io/$PROJECT_ID/${_BACKEND_SERVICE}'
+  - 'gcr.io/$PROJECT_ID/${_FRONTEND_SERVICE}'
+
+timeout: '1200s'

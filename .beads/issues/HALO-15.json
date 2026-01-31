@@ -2,11 +2,15 @@
   "id": "HALO-15",
   "title": "Create cloudbuild.yaml",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 3,
   "description": "Create Cloud Build config for GCP deployment.\n\n## cloudbuild.yaml\n- Build backend Docker image\n- Build frontend Docker image\n- Deploy backend to Cloud Run\n- Deploy frontend to Cloud Run\n\n## Open Questions\n- Which GCP project?\n- Which region? (us-central1 default)\n- Allow unauthenticated for hackathon demo?",
-  "labels": ["scaffolding", "deployment", "gcp"],
+  "labels": [
+    "scaffolding",
+    "deployment",
+    "gcp"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-02-01T04:49:22Z",
   "parent": "HALO-1"
 }
