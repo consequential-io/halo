@@ -1,0 +1,12 @@
+{
+  "id": "HALO-49",
+  "title": "Create pitch deck (6 slides)",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Hackathon pitch presentation.\n\n## Slides\n\n1. **Problem** (30s)\n   - $198B hidden tax on ecommerce\n   - 56% of ads never seen by humans\n   - 48 hours to detect critical errors\n\n2. **Insight** (30s)\n   - Marketing teams make suboptimal decisions\n   - Data fragmented, analysis slow, opportunities missed\n\n3. **Demo** (2 min)\n   - Live or video demonstration\n   - Key moment: \"$152k found in 60 seconds\"\n\n4. **Tech** (30s)\n   - Multi-agent architecture\n   - Google ADK + FastAPI + Next.js\n   - Real Meta API integration\n\n5. **Value** (30s)\n   - $X waste prevented\n   - $Y scaled into winners\n   - 80%+ recommendation accuracy target\n\n6. **Next** (30s)\n   - Real-time monitoring\n   - Google Ads integration\n   - AI-generated creative suggestions",
+  "labels": ["demo", "pitch", "presentation"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-7"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "HALO-29",
+  "title": "Implement Execute Agent",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Implement ExecuteAgentModel with mock write for hackathon.\n\n## Pattern\n```python\nEXECUTE_AGENT_PROMPT = \"\"\"\nYou are an execution agent. For each approved recommendation:\n1. Validate the action is safe to execute\n2. Execute the change (mock for now)\n3. Return confirmation with details\n\nActions you can take:\n- pause_campaign: Stop a campaign\n- adjust_budget: Increase or decrease budget\n- (creative changes require manual action - just log suggestion)\n\nReturn execution result with:\n- action_taken: what was done\n- status: 'success' | 'failed' | 'skipped'\n- details: specifics of the change\n\"\"\"\n\nclass ExecuteAgentModel:\n    def __init__(self):\n        self.agent = LlmAgent(\n            name=\"execute_agent\",\n            model=\"gemini-2.5-pro\",\n            description=\"Executes approved recommendations\",\n            instruction=EXECUTE_AGENT_PROMPT,\n            tools=[mock_execute_tool],\n        )\n```\n\n## Mock Execute Tool\n```python\nasync def mock_execute(action: str, campaign_id: str, params: dict) -> dict:\n    # Simulate execution\n    return {\n        \"status\": \"success\",\n        \"action\": action,\n        \"campaign_id\": campaign_id,\n        \"message\": f\"[MOCK] {action} executed for {campaign_id}\"\n    }\n```",
+  "labels": ["agent", "core", "execute"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-27"]
+}

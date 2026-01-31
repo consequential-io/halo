@@ -1,0 +1,12 @@
+{
+  "id": "HALO-50",
+  "title": "Write AI Impact Statement",
+  "type": "task",
+  "status": "open",
+  "priority": 2,
+  "description": "200 words on AI usage for hackathon submission.\n\n## Template\n\n### AI Technologies Used\n- **Google ADK** - Agent orchestration framework\n- **Gemini 2.5 Pro** - LLM for analysis and recommendations\n- **OpenTelemetry** - Observability and tracing\n\n### How AI Solves the Problem\nAgatha uses a multi-agent architecture where specialized AI agents collaborate to:\n1. **Analyze** ad performance data and classify spend\n2. **Recommend** budget and creative optimizations\n3. **Execute** approved changes via platform APIs\n\n### Human-AI Collaboration\n- AI handles data analysis at scale (impossible manually)\n- Humans approve/reject recommendations (accountability)\n- Transparent reasoning for each recommendation (trust)\n\n### Guardrails\n- Human-in-the-loop for all executions\n- Mock writes for hackathon (safety first)\n- Confidence thresholds before recommendations\n- Audit log of all AI decisions\n\n### Impact Metrics\n- Time-to-insight: < 60 seconds (vs hours manually)\n- Recommendation accuracy target: 80%+\n- Potential waste prevention: $150k+ per account",
+  "labels": ["docs", "hackathon", "ai"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-7"
+}

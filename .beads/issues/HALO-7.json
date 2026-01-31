@@ -1,0 +1,12 @@
+{
+  "id": "HALO-7",
+  "title": "Epic: Integration & Demo",
+  "type": "epic",
+  "status": "open",
+  "priority": 0,
+  "description": "Integration testing and demo preparation.\n\n## Deliverables\n- Unit tests for classify_spend\n- Integration tests for agent flow\n- Demo script and fallback\n- README and pitch deck\n- AI Impact Statement\n\n## Demo Target\n- Show $88k TikTok waste discovery (TL account)\n- Time-to-insight < 60 seconds",
+  "labels": ["epic", "integration", "demo"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "blockedBy": ["HALO-6"]
+}

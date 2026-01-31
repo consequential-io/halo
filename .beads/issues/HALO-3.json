@@ -1,0 +1,12 @@
+{
+  "id": "HALO-3",
+  "title": "Epic: Data Tools",
+  "type": "epic",
+  "status": "open",
+  "priority": 0,
+  "description": "Implement data connectors for BigQuery and Meta API.\n\n## Data Source Strategy\n- DEMO: Meta API (live)\n- DEV/TEST: BigQuery (pre-loaded)\n- FALLBACK: BigQuery (if Meta fails)\n\n## BigQuery Data\n- TL: 298 days history\n- WH: 76 days history\n- Fields: spend, ROAS, impressions, clicks, CTR, CPC, CPM, ad_name, ad_provider, store",
+  "labels": ["epic", "data", "bigquery", "meta-api"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "blockedBy": ["HALO-2"]
+}

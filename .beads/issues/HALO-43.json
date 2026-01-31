@@ -1,0 +1,13 @@
+{
+  "id": "HALO-43",
+  "title": "Implement API client",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Fetch wrapper with auth headers.\n\n## Implementation\n```tsx\n// lib/api.ts\nconst API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'\n\nexport async function api<T>(path: string, options?: RequestInit): Promise<T> {\n  const token = getStoredToken()\n  \n  const response = await fetch(`${API_BASE}${path}`, {\n    ...options,\n    headers: {\n      'Content-Type': 'application/json',\n      ...(token && { 'Authorization': `Bearer ${token}` }),\n      ...options?.headers,\n    },\n  })\n  \n  if (!response.ok) {\n    throw new Error(`API error: ${response.status}`)\n  }\n  \n  return response.json()\n}\n\n// Usage\nexport const analyzeAccount = (accountId: string) =>\n  api<AnalysisResponse>('/api/analyze', {\n    method: 'POST',\n    body: JSON.stringify({ account_id: accountId })\n  })\n```",
+  "labels": ["frontend", "api", "client"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-6",
+  "blockedBy": ["HALO-37"]
+}

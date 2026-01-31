@@ -1,0 +1,13 @@
+{
+  "id": "HALO-21",
+  "title": "Implement BigQuery connector tool",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Implement get_ad_data_from_bq() function as FunctionTool.\n\n## Pattern\n```python\nfrom google.cloud import bigquery\nfrom google.adk.tools import FunctionTool\nfrom typing import Dict, List\n\nasync def get_ad_data_from_bq(\n    account_id: str,\n    days: int = 30\n) -> Dict:\n    client = bigquery.Client()\n    query = f\"\"\"\n    SELECT\n        ad_name, ad_provider, spend, return_on_ad_spend_roas as roas,\n        impressions, clicks, ctr, cpc, cpm, store\n    FROM `{dataset}.{table}`\n    WHERE account_id = @account_id\n    AND datetime_PST >= DATE_SUB(CURRENT_DATE(), INTERVAL @days DAY)\n    \"\"\"\n    # Execute and return results\n\nget_ad_data_tool = FunctionTool(func=get_ad_data_from_bq)\n```\n\n## Open Questions\n- Which project/dataset/table?\n- Service account or ADC auth?",
+  "labels": ["data", "bigquery", "tool"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-3",
+  "blockedBy": ["HALO-19"]
+}

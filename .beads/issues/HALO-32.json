@@ -1,0 +1,13 @@
+{
+  "id": "HALO-32",
+  "title": "Implement /auth/meta/callback",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Handle OAuth callback, exchange code for token.\n\n## Implementation\n```python\nimport httpx\n\n@router.get(\"/meta/callback\")\nasync def meta_callback(code: str):\n    async with httpx.AsyncClient() as client:\n        response = await client.get(\n            \"https://graph.facebook.com/v19.0/oauth/access_token\",\n            params={\n                \"client_id\": settings.meta_app_id,\n                \"client_secret\": settings.meta_app_secret,\n                \"redirect_uri\": settings.meta_redirect_uri,\n                \"code\": code\n            }\n        )\n        token_data = response.json()\n        \n        # Store token (in-memory for hackathon)\n        # In production: encrypt and store in DB\n        \n        return RedirectResponse(\n            url=f\"/dashboard?token={token_data['access_token']}\"\n        )\n```\n\n## Token Storage\n- Hackathon: In-memory or session\n- Production: Encrypted in database with refresh flow",
+  "labels": ["api", "auth", "oauth"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-5",
+  "blockedBy": ["HALO-31"]
+}

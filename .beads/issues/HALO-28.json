@@ -1,0 +1,12 @@
+{
+  "id": "HALO-28",
+  "title": "Implement creative fatigue detection",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Function to flag fatigued creatives based on signals.\n\n## Fatigue Signals\n| Signal | Threshold | Action |\n|--------|-----------|--------|\n| High frequency | > 3x account avg | Refresh or expand targeting |\n| CTR decline | > 30% drop over 7 days | Test new headline/image |\n| Rising CPC | > 50% increase over 7 days | Creative losing relevance |\n| Stale runtime | > 30 days same creative | Test fresh variation |\n\n## Implementation\n```python\ndef detect_creative_fatigue(ad_data: dict, account_metrics: dict) -> dict:\n    signals = []\n    \n    # High frequency\n    if ad_data['frequency'] > account_metrics['avg_frequency'] * 3:\n        signals.append({\n            'signal': 'high_frequency',\n            'value': ad_data['frequency'],\n            'threshold': account_metrics['avg_frequency'] * 3,\n            'suggestion': 'Refresh creative or expand targeting'\n        })\n    \n    # CTR decline (need historical data)\n    # CPC increase (need historical data)\n    # Stale runtime\n    \n    return {\n        'is_fatigued': len(signals) > 0,\n        'signals': signals\n    }\n```",
+  "labels": ["agent", "creative", "fatigue"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-4"
+}

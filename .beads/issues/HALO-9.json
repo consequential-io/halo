@@ -1,0 +1,12 @@
+{
+  "id": "HALO-9",
+  "title": "Create pyproject.toml with dependencies",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Create pyproject.toml with all required dependencies.\n\n## Dependencies\n- google-adk (check version from otb-agents)\n- fastapi\n- uvicorn\n- httpx\n- pydantic\n- pydantic-settings\n- python-dotenv\n- google-cloud-bigquery\n- opentelemetry-api\n- opentelemetry-sdk\n- pytest\n- pytest-asyncio\n\n## Open Question\n- Which google-adk version? Check /Users/jaidevk/Work/dev/otb-agents/pyproject.toml",
+  "labels": ["scaffolding", "backend", "dependencies"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-1"
+}

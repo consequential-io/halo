@@ -1,0 +1,12 @@
+{
+  "id": "HALO-4",
+  "title": "Epic: Agents",
+  "type": "epic",
+  "status": "open",
+  "priority": 0,
+  "description": "Implement the three core agents and orchestrator.\n\n## Agents\n1. Analyze Agent - Classify spend as good/bad/monitor\n2. Recommend Agent - Generate budget + creative recommendations\n3. Execute Agent - Mock write with confirmation\n4. Agatha Orchestrator - Coordinate agent flow\n\n## Good/Bad Spend Logic\n- GOOD: ROAS >= 2x avg, spend >= $1k, >= 7 days\n- BAD: ROAS = 0 after $5k+/7d, or < 0.5x avg\n- WAIT: < 7 days or < $1k spend",
+  "labels": ["epic", "agents", "ai", "core"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "blockedBy": ["HALO-3"]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "HALO-22",
+  "title": "Implement Meta API read tool",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Implement get_ad_data_from_meta() function with OAuth.\n\n## Pattern\n```python\nimport httpx\nfrom google.adk.tools import FunctionTool\n\nMETA_API_VERSION = \"v19.0\"\nMETA_BASE_URL = f\"https://graph.facebook.com/{META_API_VERSION}\"\n\nasync def get_ad_data_from_meta(\n    access_token: str,\n    account_id: str,\n    days: int = 30\n) -> Dict:\n    async with httpx.AsyncClient() as client:\n        response = await client.get(\n            f\"{META_BASE_URL}/act_{account_id}/insights\",\n            params={\n                \"access_token\": access_token,\n                \"fields\": \"campaign_name,spend,impressions,clicks,ctr,cpc,actions\",\n                \"date_preset\": \"last_30d\",\n                \"level\": \"ad\"\n            }\n        )\n        return response.json()\n\nmeta_ad_data_tool = FunctionTool(func=get_ad_data_from_meta)\n```\n\n## Open Questions\n- OAuth token storage and refresh?\n- API version to use?",
+  "labels": ["data", "meta-api", "tool"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-3",
+  "blockedBy": ["HALO-19"]
+}

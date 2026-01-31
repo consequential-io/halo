@@ -1,0 +1,13 @@
+{
+  "id": "HALO-39",
+  "title": "Implement Dashboard layout",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Dashboard with header and account selector.\n\n## Layout\n- Header with Agatha logo, account dropdown, logout\n- Main content area for analysis results\n- Sidebar (optional) for navigation\n\n## Account Selector\n```tsx\n<Select onValueChange={setSelectedAccount}>\n  <SelectTrigger>\n    <SelectValue placeholder=\"Select account\" />\n  </SelectTrigger>\n  <SelectContent>\n    <SelectItem value=\"tl\">ThirdLove (TL)</SelectItem>\n    <SelectItem value=\"wh\">Whispering Homes (WH)</SelectItem>\n  </SelectContent>\n</Select>\n```\n\n## Demo Flow\n1. Show account dropdown with TL, WH\n2. \"Analyze\" button triggers /api/analyze\n3. Results appear in main content",
+  "labels": ["frontend", "ui", "dashboard"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-6",
+  "blockedBy": ["HALO-38"]
+}

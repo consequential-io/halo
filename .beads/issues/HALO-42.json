@@ -1,0 +1,13 @@
+{
+  "id": "HALO-42",
+  "title": "Implement Execution confirmation",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Success/failure messages after execution.\n\n## UI\n```tsx\n{executionComplete && (\n  <Alert variant=\"success\">\n    <AlertTitle>Changes Executed!</AlertTitle>\n    <AlertDescription>\n      {results.successful} recommendations applied successfully.\n      {results.failed > 0 && ` ${results.failed} failed.`}\n    </AlertDescription>\n  </Alert>\n)}\n```\n\n## Demo Flow\n1. User approves recommendations\n2. Click \"Execute All Approved\"\n3. Show loading spinner\n4. Display success confirmation\n5. (Optional) Celebration animation",
+  "labels": ["frontend", "ui", "execute"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-6",
+  "blockedBy": ["HALO-41"]
+}

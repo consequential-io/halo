@@ -1,0 +1,12 @@
+{
+  "id": "HALO-48",
+  "title": "Write README.md",
+  "type": "task",
+  "status": "open",
+  "priority": 2,
+  "description": "Project overview and setup instructions.\n\n## Sections\n1. **Overview** - What Agatha does\n2. **Architecture** - Multi-agent diagram\n3. **Quick Start** - How to run locally\n4. **API Reference** - Endpoints\n5. **Configuration** - Environment variables\n\n## Example\n```markdown\n# Agatha - Ad Spend Optimization Agent\n\nAI-powered multi-agent system that analyzes ad spend, identifies waste, and recommends optimizations.\n\n## Quick Start\n\n```bash\n# Backend\ncd backend\ncp .env.example .env\npip install -e .\nuvicorn main:app --reload\n\n# Frontend\ncd frontend\nnpm install\nnpm run dev\n```\n\n## Architecture\n...\n```",
+  "labels": ["docs", "readme"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-7"
+}

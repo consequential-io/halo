@@ -1,0 +1,13 @@
+{
+  "id": "HALO-27",
+  "title": "Implement Recommend Agent",
+  "type": "task",
+  "status": "open",
+  "priority": 0,
+  "description": "Implement RecommendAgentModel with budget and creative recommendations.\n\n## Recommendation Types\n1. **Scale Winner**: Increase budget on high-ROAS campaigns\n2. **Cut Loser**: Pause/reduce budget on wasteful spend\n3. **Refresh Creative**: Flag creative fatigue + suggestions\n4. **Fix Frequency**: Reduce budget when frequency too high\n\n## Prompt\n```\nYou are a recommendation agent. Based on the analysis:\n\nFor GOOD spend:\n- Recommend scaling budget by 30-100%\n- Estimate additional revenue potential\n\nFor BAD spend:\n- Recommend pausing or reducing budget by 50-100%\n- Calculate waste prevention\n\nFor creative fatigue:\n- Flag ads with high frequency (>3x avg)\n- Suggest creative refresh actions\n\nReturn structured recommendations with:\n- action: 'scale' | 'reduce' | 'pause' | 'refresh_creative'\n- amount: dollar or percentage change\n- reasoning: why this recommendation\n- impact: estimated $ impact\n```",
+  "labels": ["agent", "core", "recommend"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-25"]
+}

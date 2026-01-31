@@ -1,0 +1,12 @@
+{
+  "id": "HALO-13",
+  "title": "Setup pytest and test directory structure",
+  "type": "task",
+  "status": "open",
+  "priority": 2,
+  "description": "Create test framework structure with pytest.\n\n## Structure\n```\ntests/\n├── unit/\n│   ├── test_classify_spend.py\n│   ├── test_analyze_agent.py\n│   └── test_recommend_logic.py\n├── integration/\n│   ├── test_agent_flow.py\n│   ├── test_bigquery_connector.py\n│   └── test_api_endpoints.py\n└── conftest.py  # Shared fixtures\n```\n\n## conftest.py fixtures\n- sample_ad_data\n- mock_agent_response\n- test_client (FastAPI TestClient)",
+  "labels": ["scaffolding", "testing"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-1"
+}

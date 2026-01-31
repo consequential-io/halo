@@ -1,0 +1,12 @@
+{
+  "id": "HALO-10",
+  "title": "Create .env.example with all env vars",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Create .env.example template for local development.\n\n## Environment Variables\n```\n# AI Provider\nAI_PROVIDER=gemini\nGEMINI_MODEL=gemini-2.5-pro\nOPENAI_MODEL=gpt-4-turbo\nGEMINI_API_KEY=\nOPENAI_API_KEY=\n\n# BigQuery\nGOOGLE_CLOUD_PROJECT=\nBQ_DATASET=\nBQ_TABLE=\n\n# Meta API\nMETA_APP_ID=\nMETA_APP_SECRET=\nMETA_REDIRECT_URI=\n\n# Observability\nFI_PROJECT_NAME=agatha\n\n# App\nENVIRONMENT=development\nLOG_LEVEL=INFO\n```",
+  "labels": ["scaffolding", "config"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-1"
+}

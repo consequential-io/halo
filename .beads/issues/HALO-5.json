@@ -1,0 +1,12 @@
+{
+  "id": "HALO-5",
+  "title": "Epic: API Routes",
+  "type": "epic",
+  "status": "open",
+  "priority": 0,
+  "description": "Implement FastAPI routes for auth and agent interactions.\n\n## Routes\n- /auth/meta/login - Redirect to Meta OAuth\n- /auth/meta/callback - Handle OAuth callback\n- /api/analyze - Trigger analysis\n- /api/recommendations - Get recommendations\n- /api/execute - Execute approved recommendations\n- /api/accounts - List connected accounts",
+  "labels": ["epic", "api", "routes"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "blockedBy": ["HALO-4"]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "HALO-38",
+  "title": "Implement Login page",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Login page with Meta OAuth button.\n\n## UI\n- Centered card with Agatha branding\n- \"Connect with Meta\" button\n- Brief description of what the app does\n\n## Implementation\n```tsx\nexport default function LoginPage() {\n  return (\n    <div className=\"flex min-h-screen items-center justify-center\">\n      <Card className=\"w-96\">\n        <CardHeader>\n          <CardTitle>Agatha</CardTitle>\n          <CardDescription>\n            AI-powered ad spend optimization\n          </CardDescription>\n        </CardHeader>\n        <CardContent>\n          <Button asChild className=\"w-full\">\n            <a href=\"/api/auth/meta/login\">\n              Connect with Meta\n            </a>\n          </Button>\n        </CardContent>\n      </Card>\n    </div>\n  )\n}\n```",
+  "labels": ["frontend", "ui", "auth"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-6",
+  "blockedBy": ["HALO-37"]
+}

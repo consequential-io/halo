@@ -1,0 +1,12 @@
+{
+  "id": "HALO-24",
+  "title": "Create test fixtures from BQ data",
+  "type": "task",
+  "status": "open",
+  "priority": 2,
+  "description": "Export sample ad data from BigQuery as JSON fixtures.\n\n## Fixtures to create\n- TL account sample (high-performing ads)\n- TL TikTok waste example ($88k, 0 ROAS)\n- WH account sample\n- WH Floor Lamps waste example (₹55k, 0 ROAS)\n\n## Location\ntests/fixtures/\n├── tl_sample_ads.json\n├── wh_sample_ads.json\n└── edge_cases.json\n\n## Use in tests\n```python\n@pytest.fixture\ndef sample_ad_data():\n    with open(\"tests/fixtures/tl_sample_ads.json\") as f:\n        return json.load(f)\n```",
+  "labels": ["data", "testing", "fixtures"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-3"
+}

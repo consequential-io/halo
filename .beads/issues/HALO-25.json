@@ -1,0 +1,13 @@
+{
+  "id": "HALO-25",
+  "title": "Implement Analyze Agent",
+  "type": "task",
+  "status": "open",
+  "priority": 0,
+  "description": "Implement AnalyzeAgentModel class with prompt.\n\n## Pattern (from otb-agents)\n```python\nfrom google.adk.agents import LlmAgent\n\nANALYZE_AGENT_PROMPT = \"\"\"\nYou are an ad spend analysis agent. Analyze the provided ad performance data\nand classify each ad/campaign as:\n- GOOD: High performers to scale\n- BAD: Wasteful spend to pause/reduce\n- OK: Average performers to monitor\n- WAIT: Not enough data yet\n\nUse these thresholds:\n- GOOD: ROAS >= 2x account avg, spend >= $1k, >= 7 days\n- BAD: ROAS = 0 after $5k+/7d, or ROAS < 0.5x avg after $10k\n- WAIT: < 7 days or < $1k spend\n\nReturn structured JSON with classifications and reasoning.\n\"\"\"\n\nclass AnalyzeAgentModel:\n    def __init__(self):\n        self.agent = LlmAgent(\n            name=\"analyze_agent\",\n            model=\"gemini-2.5-pro\",\n            description=\"Analyzes ad performance data\",\n            instruction=ANALYZE_AGENT_PROMPT,\n            tools=[get_ad_data_tool],\n            before_agent_callback=transform_ad_data,\n        )\n```",
+  "labels": ["agent", "core", "analyze"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-23"]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "HALO-47",
+  "title": "Record fallback demo video",
+  "type": "task",
+  "status": "open",
+  "priority": 2,
+  "description": "Screen recording if live demo fails.\n\n## Recording\n- Tool: Loom or QuickTime\n- Duration: 2-3 minutes\n- Show full flow with real data\n- Add voiceover explaining each step\n\n## Scenarios to record\n1. Happy path - full demo flow\n2. Key moment - the \"$152k found\" reveal\n3. Recommendation approval and execution\n\n## When to use\n- If Meta OAuth fails during demo\n- If API is slow/unresponsive\n- If any technical issues occur",
+  "labels": ["demo", "fallback"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-7",
+  "blockedBy": ["HALO-42"]
+}

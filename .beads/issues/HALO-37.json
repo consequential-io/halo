@@ -1,0 +1,13 @@
+{
+  "id": "HALO-37",
+  "title": "Setup shadcn/ui components",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Install and configure shadcn/ui for minimal UI.\n\n## Installation\n```bash\nnpx shadcn@latest init\nnpx shadcn@latest add button card badge alert dialog\n```\n\n## Components needed\n- Button (approve/reject actions)\n- Card (recommendation cards)\n- Badge (status indicators)\n- Alert (success/error messages)\n- Dialog (confirmation modals)",
+  "labels": ["frontend", "ui", "components"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-6",
+  "blockedBy": ["HALO-11"]
+}

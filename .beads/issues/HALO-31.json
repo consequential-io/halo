@@ -1,0 +1,13 @@
+{
+  "id": "HALO-31",
+  "title": "Implement /auth/meta/login",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "Redirect to Meta OAuth.\n\n## Implementation\n```python\nfrom fastapi import APIRouter\nfrom fastapi.responses import RedirectResponse\nfrom config.settings import settings\n\nrouter = APIRouter()\n\n@router.get(\"/meta/login\")\nasync def meta_login():\n    oauth_url = (\n        \"https://www.facebook.com/v19.0/dialog/oauth?\"\n        f\"client_id={settings.meta_app_id}\"\n        f\"&redirect_uri={settings.meta_redirect_uri}\"\n        \"&scope=ads_read,ads_management\"\n    )\n    return RedirectResponse(url=oauth_url)\n```\n\n## Open Questions\n- Callback URL for hackathon deployment?",
+  "labels": ["api", "auth", "oauth"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-5",
+  "blockedBy": ["HALO-20"]
+}

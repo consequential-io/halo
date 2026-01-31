@@ -1,0 +1,13 @@
+{
+  "id": "HALO-44",
+  "title": "Write unit tests for classify_spend",
+  "type": "task",
+  "status": "open",
+  "priority": 1,
+  "description": "pytest tests with edge cases.\n\n## Test Cases\n```python\nimport pytest\nfrom helpers.tools import classify_spend\n\nclass TestClassifySpend:\n    def test_good_spend_high_roas(self):\n        ad = {'roas': 10.0, 'spend': 5000, 'days_running': 14}\n        assert classify_spend(ad, 2.5) == 'GOOD'  # 4x avg\n\n    def test_bad_spend_zero_roas(self):\n        ad = {'roas': 0, 'spend': 88000, 'days_running': 30}\n        assert classify_spend(ad, 2.5) == 'BAD'\n\n    def test_wait_learning_phase(self):\n        ad = {'roas': 5.0, 'spend': 500, 'days_running': 3}\n        assert classify_spend(ad, 2.5) == 'WAIT'\n\n    def test_ok_average_performer(self):\n        ad = {'roas': 3.0, 'spend': 5000, 'days_running': 14}\n        assert classify_spend(ad, 2.5) == 'OK'  # 1.2x avg\n\n    def test_warning_below_average(self):\n        ad = {'roas': 1.5, 'spend': 15000, 'days_running': 14}\n        assert classify_spend(ad, 2.5) == 'WARNING'  # 0.6x avg\n```",
+  "labels": ["testing", "unit", "core"],
+  "created": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T08:00:00Z",
+  "parent": "HALO-7",
+  "blockedBy": ["HALO-26"]
+}
