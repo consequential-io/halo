@@ -1,0 +1,12 @@
+{
+  "id": "HALO-54",
+  "title": "RESOLVED: Fixture files available",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Production API fixture files have been copied to tests/fixtures/.\n\n## Files Available\n```\ntests/fixtures/\n├── tl_ad_performance_prod.json      (451KB, 128 ads)\n├── tl_adset_performance_prod.json   (240KB)\n├── tl_campaign_performance_prod.json (46KB)\n├── wh_ad_performance_prod.json      (84KB)\n├── wh_adset_performance_prod.json   (39KB)\n└── wh_campaign_performance_prod.json (24KB)\n```\n\n## Key Schema Fields (from production)\n- `grade`: A/B/C/D\n- `performance_segment`: winners, high_potential, underperformers, losers\n- `recommended_action`: scale_budget, continue_monitoring, pause_and_review\n- `Composite_Score`: float (weighted z-scores)\n- `z_ctr`, `z_roas`, `z_cpa`, `z_cvr`: z-scores\n- `days_active`: int\n- `percentile_rank`: float (0 = top)\n\n## Resolution\nFixtures copied from ~/Downloads/ on 2026-01-31.",
+  "labels": ["resolved", "fixtures", "data"],
+  "created": "2026-01-31T14:40:00Z",
+  "updated": "2026-01-31T14:40:00Z",
+  "parent": "HALO-3"
+}

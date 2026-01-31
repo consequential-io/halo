@@ -1,12 +1,21 @@
 {
   "id": "HALO-24",
-  "title": "Create test fixtures from BQ data",
+  "title": "Create test fixtures and mock data tool",
   "type": "task",
-  "status": "open",
-  "priority": 2,
-  "description": "Export sample ad data from BigQuery as JSON fixtures.\n\n## Fixtures to create\n- TL account sample (high-performing ads)\n- TL TikTok waste example ($88k, 0 ROAS)\n- WH account sample\n- WH Floor Lamps waste example (₹55k, 0 ROAS)\n\n## Location\ntests/fixtures/\n├── tl_sample_ads.json\n├── wh_sample_ads.json\n└── edge_cases.json\n\n## Use in tests\n```python\n@pytest.fixture\ndef sample_ad_data():\n    with open(\"tests/fixtures/tl_sample_ads.json\") as f:\n        return json.load(f)\n```",
-  "labels": ["data", "testing", "fixtures"],
+  "status": "closed",
+  "priority": 0,
+  "description": "Export sample ad data from BigQuery as JSON fixtures AND create mock data tool for AI-first validation.\n\n## AI-First Priority\nThis is now CRITICAL PATH - agents are validated with mock data BEFORE building data connectors.\n\n## Fixtures to create\n- TL account sample (high-performing ads)\n- TL TikTok waste example ($88k, 0 ROAS)\n- WH account sample\n- WH Floor Lamps waste example (₹55k, 0 ROAS)\n\n## Location\ntests/fixtures/\n├── tl_sample_ads.json\n├── wh_sample_ads.json\n└── edge_cases.json\n\n## Mock Data Tool (P1-2)\n```python\nfrom google.adk.tools import FunctionTool\nimport json\n\nasync def get_ad_data_mock(account_id: str, days: int = 30) -> Dict:\n    \"\"\"Return fixture data for AI validation.\"\"\"\n    fixture_path = f\"tests/fixtures/{account_id}_sample_ads.json\"\n    with open(fixture_path) as f:\n        return json.load(f)\n\nget_ad_data_tool = FunctionTool(func=get_ad_data_mock)\n```\n\n## Use in tests\n```python\n@pytest.fixture\ndef sample_ad_data():\n    with open(\"tests/fixtures/tl_sample_ads.json\") as f:\n        return json.load(f)\n```",
+  "labels": [
+    "data",
+    "testing",
+    "fixtures",
+    "ai-first",
+    "critical-path"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
-  "parent": "HALO-3"
+  "updated": "2026-01-31T16:00:00Z",
+  "parent": "HALO-3",
+  "blockedBy": [
+    "HALO-8"
+  ]
 }

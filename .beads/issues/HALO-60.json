@@ -1,0 +1,20 @@
+{
+  "id": "HALO-60",
+  "title": "Implement get_ontology tool",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Implement ontology/hierarchy tool for dimensional breakdown.\n\n## SME Input\n\"The goal is to find ontology, not so much an idea of what the metrics are.\"\n\n## Tool Signature\n```python\nasync def get_ontology(\n    ads: List[dict],\n    group_by: List[str],\n    metrics: List[str] = None,\n    config: dict = ONTOLOGY_CONFIG\n) -> dict\n```\n\n## Supported Dimensions (Expanded Scope)\n- `ad_provider` - Google Ads, Facebook Ads, TikTok Ads\n- `store` - US, IND (market)\n- `ad_type` - Static, Video, Shopping, Performance Max\n- `creative_status` - multi_variant_winner, needs_testing, fatigued\n- `spend_tier` - High, Medium, Low\n- `db_campaign_status` - ACTIVE, PAUSED, REMOVED\n- `performance_segment` - winners, high_potential, underperformers, losers\n\n## Implementation\n```python\nfrom collections import defaultdict\nfrom typing import List\n\ndef get_ontology(ads, group_by, metrics=None):\n    if metrics is None:\n        metrics = [\"Spend\", \"ROAS\", \"CPA\", \"CTR\"]\n    \n    # Build hierarchical breakdown\n    breakdown = defaultdict(lambda: {\"count\": 0, \"ads\": []})\n    \n    for ad in ads:\n        # Build key from dimensions\n        key_parts = [str(ad.get(dim, \"Unknown\")) for dim in group_by]\n        key = \" > \".join(key_parts) if len(key_parts) > 1 else key_parts[0]\n        \n        breakdown[key][\"count\"] += 1\n        breakdown[key][\"ads\"].append(ad)\n    \n    # Aggregate metrics\n    result = {}\n    for key, data in breakdown.items():\n        result[key] = {\n            \"count\": data[\"count\"],\n        }\n        for metric in metrics:\n            values = [ad.get(metric, 0) for ad in data[\"ads\"] if ad.get(metric) is not None]\n            if values:\n                if metric == \"Spend\":\n                    result[key][f\"total_{metric.lower()}\"] = sum(values)\n                else:\n                    result[key][f\"avg_{metric.lower()}\"] = round(sum(values)/len(values), 2)\n    \n    return {\n        \"breakdown\": dict(result),\n        \"dimensions_used\": group_by,\n        \"total_ads\": len(ads)\n    }\n```\n\n## Example Output\n```python\nget_ontology(ads, group_by=[\"ad_provider\"])\n# {\n#   \"breakdown\": {\n#     \"Google Ads\": {\"count\": 45, \"total_spend\": 125000, \"avg_roas\": 2.3},\n#     \"Facebook Ads\": {\"count\": 55, \"total_spend\": 98000, \"avg_roas\": 1.8},\n#     \"TikTok Ads\": {\"count\": 28, \"total_spend\": 88000, \"avg_roas\": 0.3}\n#   },\n#   \"dimensions_used\": [\"ad_provider\"],\n#   \"total_ads\": 128\n# }\n```",
+  "labels": [
+    "tool",
+    "ontology",
+    "ai-first",
+    "critical-path"
+  ],
+  "created": "2026-01-31T15:30:00Z",
+  "updated": "2026-01-31T16:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": [
+    "HALO-24"
+  ]
+}

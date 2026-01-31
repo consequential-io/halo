@@ -1,0 +1,12 @@
+{
+  "id": "HALO-57",
+  "title": "RESOLVED: Account average ROAS - dual approach with config",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Implement both fixture-based and BQ-based approaches with config-driven selection.\n\n## Decision\nImplement BOTH approaches, select via config. Default to BQ (live data).\n\n## Config\n```python\n# config/classification_config.py\nDATA_SOURCE_CONFIG = {\n    \"roas_baseline\": {\n        \"source\": \"bq\",  # \"bq\" | \"fixture\"\n        \"bq_method\": \"rolling_weighted\",  # \"rolling_weighted\" | \"rolling_simple\" | \"median\"\n        \"rolling_days\": 30,\n    },\n}\n```\n\n## Implementation\n```python\ndef get_platform_avg_roas(\n    ads: List[dict],\n    config: dict = DATA_SOURCE_CONFIG\n) -> float:\n    \"\"\"Get platform average ROAS based on config.\"\"\"\n    source = config['roas_baseline']['source']\n    \n    # Option 1: Use pre-computed from fixtures\n    if source == 'fixture':\n        # Use platform_avg_roas from first ad (same for all ads in account)\n        return ads[0].get('platform_avg_roas', 0) if ads else 0\n    \n    # Option 2: Calculate from BQ data\n    method = config['roas_baseline']['bq_method']\n    \n    if method == 'rolling_weighted':\n        # Weight each ad's ROAS by spend\n        total_spend = sum(ad.get('Spend', 0) for ad in ads)\n        if total_spend == 0:\n            return 0\n        weighted_sum = sum(\n            ad.get('ROAS', 0) * ad.get('Spend', 0) \n            for ad in ads\n        )\n        return weighted_sum / total_spend\n    \n    elif method == 'rolling_simple':\n        # Simple average\n        roas_values = [ad.get('ROAS', 0) for ad in ads if ad.get('Spend', 0) > 0]\n        return sum(roas_values) / len(roas_values) if roas_values else 0\n    \n    elif method == 'median':\n        # Median for outlier robustness\n        import statistics\n        roas_values = [ad.get('ROAS', 0) for ad in ads if ad.get('Spend', 0) >= 100]\n        return statistics.median(roas_values) if roas_values else 0\n    \n    return 0\n```\n\n## Default\n- Source: `bq` (live data)\n- Method: `rolling_weighted` (spend-weighted average)\n\n## Resolution\nDual approach implemented with config selection. Default to BQ rolling weighted.",
+  "labels": ["resolved", "classification", "config"],
+  "created": "2026-01-31T14:40:00Z",
+  "updated": "2026-01-31T15:00:00Z",
+  "parent": "HALO-4"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "HALO-52",
+  "title": "GATE 2: Human Review of Recommendations",
+  "type": "task",
+  "status": "open",
+  "priority": 0,
+  "description": "Second AI validation gate. Human review of Recommend Agent output for actionability.\n\n## Gate Criteria\n- [ ] Recommendations are actionable (clear what to do)\n- [ ] Budget changes are reasonable (not extreme)\n- [ ] Reasoning is understandable to non-technical user\n- [ ] Impact estimates are plausible\n\n## Validation Process\n1. Run Recommend Agent with Analyze Agent output\n2. Review each recommendation type:\n   - Scale winners: Does the scaling % make sense?\n   - Cut losers: Is the reduction/pause justified?\n   - Refresh creative: Are fatigue signals valid?\n3. Check edge cases:\n   - What happens with mixed performance?\n   - What happens with insufficient data?\n\n## Pass Criteria\n- Human reviewer (team member) approves recommendations\n- No obviously wrong recommendations\n- Recommendations align with ad industry best practices\n\n## Fail Action\nSimplify recommendation logic, reduce scope if needed.\n\n## Target Time\nFeb 1, 00:00 IST",
+  "labels": ["gate", "validation", "ai-first", "critical-path"],
+  "created": "2026-01-31T12:00:00Z",
+  "updated": "2026-01-31T12:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-27"]
+}

@@ -1,13 +1,24 @@
 {
   "id": "HALO-25",
-  "title": "Implement Analyze Agent",
+  "title": "Implement Analyze Agent (Anomaly Detection)",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 0,
-  "description": "Implement AnalyzeAgentModel class with prompt.\n\n## Pattern (from otb-agents)\n```python\nfrom google.adk.agents import LlmAgent\n\nANALYZE_AGENT_PROMPT = \"\"\"\nYou are an ad spend analysis agent. Analyze the provided ad performance data\nand classify each ad/campaign as:\n- GOOD: High performers to scale\n- BAD: Wasteful spend to pause/reduce\n- OK: Average performers to monitor\n- WAIT: Not enough data yet\n\nUse these thresholds:\n- GOOD: ROAS >= 2x account avg, spend >= $1k, >= 7 days\n- BAD: ROAS = 0 after $5k+/7d, or ROAS < 0.5x avg after $10k\n- WAIT: < 7 days or < $1k spend\n\nReturn structured JSON with classifications and reasoning.\n\"\"\"\n\nclass AnalyzeAgentModel:\n    def __init__(self):\n        self.agent = LlmAgent(\n            name=\"analyze_agent\",\n            model=\"gemini-2.5-pro\",\n            description=\"Analyzes ad performance data\",\n            instruction=ANALYZE_AGENT_PROMPT,\n            tools=[get_ad_data_tool],\n            before_agent_callback=transform_ad_data,\n        )\n```",
-  "labels": ["agent", "core", "analyze"],
+  "description": "Implement AnalyzeAgentModel using anomaly detection tools.\n\n## Approach Change (SME Validated)\nInstead of fixed classification (GOOD/BAD/OK), the agent now:\n1. Detects statistical anomalies (>Nσ from baseline)\n2. Explores ontology (dimensional breakdown)\n3. Runs deep RCA on anomalies\n\n## Agent Tools\n- `detect_anomalies` - Find outliers in spend, CPA, ROAS, CTR\n- `get_ontology` - Hierarchical breakdown by provider, store, type\n- `run_rca` - Deep root cause analysis\n- `get_ad_data` - Fetch raw data from BQ/fixtures\n\n## Pattern\n```python\nfrom google.adk.agents import LlmAgent\nfrom helpers.tools import detect_anomalies_tool, get_ontology_tool, run_rca_tool, get_ad_data_tool\n\nANALYZE_AGENT_PROMPT = \"\"\"\nYou are an ad spend analysis agent. Your goal is to find anomalies in ad performance.\n\nApproach:\n1. First, fetch ad data using get_ad_data\n2. Detect anomalies using detect_anomalies for key metrics (CPA high, ROAS low)\n3. Use get_ontology to understand which dimensions have most anomalies\n4. For significant anomalies, run deep RCA using run_rca\n5. Surface findings with actionable recommendations\n\nMetrics to analyze:\n- CPA (high = wasteful spend)\n- ROAS (low = poor return)\n- Spend (high + low ROAS = waste)\n- CTR (low = engagement issues)\n\nFor each anomaly, explain:\n- What: Which ad and what metric is anomalous\n- How much: The deviation from baseline (z-score)\n- Why: Root cause factors from RCA\n- Action: What to do about it\n\nReturn structured findings, not fixed classifications.\n\"\"\"\n\nclass AnalyzeAgentModel:\n    def __init__(self):\n        self.agent = LlmAgent(\n            name=\"analyze_agent\",\n            model=\"gemini-2.5-pro\",\n            description=\"Analyzes ad performance using anomaly detection\",\n            instruction=ANALYZE_AGENT_PROMPT,\n            tools=[\n                get_ad_data_tool,\n                detect_anomalies_tool,\n                get_ontology_tool,\n                run_rca_tool\n            ],\n        )\n```\n\n## Example Agent Flow\n```\n1. get_ad_data(account_id=\"tl\", days=30)\n2. detect_anomalies(ads, metric=\"CPA\", direction=\"high\")\n   → Found 5 ads with CPA >2σ\n3. get_ontology(ads, group_by=[\"ad_provider\"])\n   → TikTok: 4/5 anomalies\n4. run_rca(worst_ad, all_ads, \"CPA\")\n   → Root cause: low engagement, creative fatigue\n5. Return findings with recommendations\n```",
+  "labels": [
+    "agent",
+    "core",
+    "analyze",
+    "ai-first",
+    "critical-path",
+    "anomaly"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T16:00:00Z",
   "parent": "HALO-4",
-  "blockedBy": ["HALO-23"]
+  "blockedBy": [
+    "HALO-59",
+    "HALO-60",
+    "HALO-61"
+  ]
 }

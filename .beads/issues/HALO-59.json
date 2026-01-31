@@ -1,0 +1,20 @@
+{
+  "id": "HALO-59",
+  "title": "Implement detect_anomalies tool",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Implement anomaly detection tool using statistical deviation.\n\n## SME Input\n\"The best goal is to find anomalies... it's spend RCA or CPA std deviation.\"\n\n## Tool Signature\n```python\nasync def detect_anomalies(\n    ads: List[dict],\n    metric: str,                    # spend | cpa | roas | ctr | cvr\n    threshold_sigma: float = 2.0,\n    direction: str = \"both\",        # high | low | both\n    min_spend: float = 100,\n    config: dict = ANOMALY_CONFIG\n) -> dict\n```\n\n## Implementation\n```python\nimport statistics\nfrom typing import List\n\ndef detect_anomalies(ads, metric, threshold_sigma=2.0, direction=\"both\", min_spend=100):\n    # Filter ads with minimum spend\n    eligible = [ad for ad in ads if ad.get('Spend', 0) >= min_spend]\n    if len(eligible) < 10:\n        return {\"anomalies\": [], \"error\": \"Insufficient sample size\"}\n    \n    # Get metric values\n    values = [ad.get(metric, 0) for ad in eligible]\n    mean = statistics.mean(values)\n    std = statistics.stdev(values) if len(values) > 1 else 0\n    \n    if std == 0:\n        return {\"anomalies\": [], \"baseline_stats\": {\"mean\": mean, \"std\": 0}}\n    \n    anomalies = []\n    for ad in eligible:\n        value = ad.get(metric, 0)\n        z_score = (value - mean) / std\n        \n        is_anomaly = False\n        if direction == \"high\" and z_score >= threshold_sigma:\n            is_anomaly = True\n        elif direction == \"low\" and z_score <= -threshold_sigma:\n            is_anomaly = True\n        elif direction == \"both\" and abs(z_score) >= threshold_sigma:\n            is_anomaly = True\n        \n        if is_anomaly:\n            severity = \"mild\" if abs(z_score) < 2 else \"significant\" if abs(z_score) < 3 else \"extreme\"\n            anomalies.append({\n                \"ad\": ad,\n                \"metric\": metric,\n                \"value\": value,\n                \"baseline\": mean,\n                \"z_score\": round(z_score, 2),\n                \"direction\": \"high\" if z_score > 0 else \"low\",\n                \"severity\": severity\n            })\n    \n    return {\n        \"anomalies\": sorted(anomalies, key=lambda x: abs(x[\"z_score\"]), reverse=True),\n        \"baseline_stats\": {\"mean\": round(mean, 2), \"std\": round(std, 2), \"count\": len(eligible)}\n    }\n```\n\n## Supported Metrics\n- `Spend` - Total ad spend (direction: high)\n- `CPA` - Cost per acquisition (direction: high = bad)\n- `ROAS` - Return on ad spend (direction: low = bad)\n- `CTR` - Click-through rate (direction: both)\n- `z_cpa`, `z_roas`, `z_ctr` - Pre-computed z-scores from fixtures",
+  "labels": [
+    "tool",
+    "anomaly",
+    "ai-first",
+    "critical-path"
+  ],
+  "created": "2026-01-31T15:30:00Z",
+  "updated": "2026-01-31T16:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": [
+    "HALO-24"
+  ]
+}

@@ -1,12 +1,17 @@
 {
   "id": "HALO-8",
-  "title": "Create backend directory structure",
+  "title": "Create minimal backend setup (AI-first)",
   "type": "task",
-  "status": "open",
-  "priority": 1,
-  "description": "Create all __init__.py files and empty modules for backend.\n\n## Structure\n```\nbackend/\n├── main.py\n├── config/\n│   ├── __init__.py\n│   ├── session_manager.py\n│   └── settings.py\n├── models/\n│   ├── __init__.py\n│   ├── analyze_agent.py\n│   ├── recommend_agent.py\n│   └── execute_agent.py\n├── controllers/\n│   ├── __init__.py\n│   ├── base_controller.py\n│   └── agatha_controller.py\n├── routes/\n│   ├── __init__.py\n│   ├── auth_routes.py\n│   └── agent_routes.py\n├── helpers/\n│   ├── __init__.py\n│   ├── tools.py\n│   └── callback_helper.py\n└── schemas/\n    ├── __init__.py\n    ├── requests.py\n    └── responses.py\n```",
-  "labels": ["scaffolding", "backend"],
+  "status": "closed",
+  "priority": 0,
+  "description": "Create MINIMAL directory structure and config for AI-first validation.\n\n## AI-First Scope (reduced from original)\nOnly create what's needed to run agents with mock data:\n\n```\nbackend/\n├── pyproject.toml          # Minimal deps: google-adk, pydantic\n├── config/\n│   ├── __init__.py\n│   └── settings.py         # AI_PROVIDER, model config only\n├── models/\n│   ├── __init__.py\n│   ├── analyze_agent.py    # First agent\n│   └── recommend_agent.py  # Second agent\n├── helpers/\n│   ├── __init__.py\n│   └── tools.py            # Mock data tool only\ntests/\n└── fixtures/               # Mock data JSON files\n```\n\n## Deferred to Later\n- Full route structure (HALO-5)\n- Controllers (after agents validated)\n- Session management (after routes)\n- Auth routes (after basic flow works)\n\n## pyproject.toml (minimal)\n```toml\n[project]\nname = \"agatha-backend\"\nversion = \"0.1.0\"\ndependencies = [\n    \"google-adk>=0.1.0\",\n    \"pydantic>=2.0\",\n]\n\n[project.optional-dependencies]\ndev = [\"pytest\", \"pytest-asyncio\"]\n```",
+  "labels": [
+    "scaffolding",
+    "backend",
+    "ai-first",
+    "critical-path"
+  ],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T16:00:00Z",
   "parent": "HALO-1"
 }

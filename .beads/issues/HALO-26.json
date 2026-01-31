@@ -1,12 +1,12 @@
 {
   "id": "HALO-26",
-  "title": "Implement classify_spend() logic",
+  "title": "SUPERSEDED: classify_spend() logic",
   "type": "task",
-  "status": "open",
-  "priority": 0,
-  "description": "Implement pure function with thresholds from brainstorm.\n\n## Implementation\n```python\ndef classify_spend(ad_data: dict, account_avg_roas: float) -> str:\n    roas = ad_data.get('roas', 0)\n    spend = ad_data.get('spend', 0)\n    days = ad_data.get('days_running', 0)\n    \n    # Learning phase - need more data\n    if days < 7 or spend < 1000:\n        return \"WAIT\"\n    \n    # Zero ROAS after significant spend\n    if roas == 0 and spend >= 5000:\n        return \"BAD\"\n    \n    # Calculate ratio vs account average\n    if account_avg_roas == 0:\n        return \"WAIT\"  # Can't calculate ratio\n    \n    roas_ratio = roas / account_avg_roas\n    \n    if roas_ratio >= 2.0:\n        return \"GOOD\"   # Scale 30-100%\n    elif roas_ratio >= 1.0:\n        return \"OK\"     # Monitor\n    elif roas_ratio >= 0.5:\n        return \"WARNING\"  # Review\n    else:\n        return \"BAD\"    # Reduce 50%\n```\n\n## Decision Matrix\n| ROAS vs Avg | Spend | Days | Status | Action |\n|-------------|-------|------|--------|--------|\n| >= 2x | >= $1k | >= 7 | GOOD | Scale 30-100% |\n| 1x - 2x | >= $1k | >= 7 | OK | Monitor |\n| 0.5x - 1x | >= $10k | >= 7 | WARNING | Review |\n| < 0.5x | >= $10k | >= 7 | BAD | Reduce 50% |\n| = 0 | >= $5k | >= 7 | BAD | Pause |",
-  "labels": ["agent", "logic", "core"],
+  "status": "closed",
+  "priority": 2,
+  "description": "## SUPERSEDED by Anomaly Detection Approach\n\nThis task was for fixed-threshold classification (GOOD/BAD/OK/WARNING/WAIT).\n\nPer SME feedback, we now use anomaly detection instead:\n- HALO-59: detect_anomalies tool\n- HALO-60: get_ontology tool\n- HALO-61: run_rca tool\n\n## Original Description (for reference)\nImplement pure function with thresholds from brainstorm.\n\n```python\ndef classify_spend(ad_data: dict, account_avg_roas: float) -> str:\n    # ... fixed threshold logic ...\n```\n\n## Why Superseded\nSME input: \"The best goal is to find anomalies... there is no concept of leakage... it's spend RCA or CPA std deviation. The goal is to find ontology, not so much an idea of what the metrics are.\"\n\nFixed classifications don't capture the nuance needed. Anomaly detection with RCA provides better insights.",
+  "labels": ["superseded", "classification"],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T15:30:00Z",
   "parent": "HALO-4"
 }

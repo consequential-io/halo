@@ -1,0 +1,13 @@
+{
+  "id": "HALO-53",
+  "title": "GATE 3: Live Data Quality Check",
+  "type": "task",
+  "status": "open",
+  "priority": 0,
+  "description": "Third AI validation gate. Verify live BigQuery data produces same quality output as fixtures.\n\n## Gate Criteria\n- [ ] BigQuery connector returns data in expected format\n- [ ] Live data volume is sufficient (>= 30 days, >= 10 ads)\n- [ ] Agent output quality matches fixture-based output\n- [ ] No new edge cases break classification logic\n\n## Validation Process\n1. Run BigQuery tool with TL account\n2. Feed live data to Analyze Agent\n3. Compare output quality to fixture-based run\n4. Check for data quality issues:\n   - Missing fields?\n   - Unexpected nulls?\n   - Date range gaps?\n\n## Pass Criteria\n- Live data output is comparable quality to fixtures\n- No regressions in classification accuracy\n- Performance is acceptable (<30s for analysis)\n\n## Fail Action\nUse fixtures for demo (fallback). Live data becomes stretch goal.\n\n## Target Time\nFeb 1, 02:00 IST",
+  "labels": ["gate", "validation", "ai-first", "critical-path"],
+  "created": "2026-01-31T12:00:00Z",
+  "updated": "2026-01-31T12:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-21"]
+}

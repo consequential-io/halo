@@ -1,0 +1,21 @@
+{
+  "id": "HALO-51",
+  "title": "GATE 1: Validate Anomaly Detection vs Fixtures",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "First AI validation gate. Verify anomaly detection tools work correctly with fixture data.\n\n## Gate Criteria (Updated for Anomaly Approach)\n- [ ] detect_anomalies finds ads with z_cpa > 2.0 (from fixture z-scores)\n- [ ] detect_anomalies finds ads with z_roas < -2.0\n- [ ] get_ontology correctly groups by ad_provider, store, ad_type\n- [ ] run_rca identifies root causes for anomalous ads\n- [ ] Agent can chain tools: data → anomalies → ontology → RCA\n\n## Validation Process\n1. Load fixture data (tl_ad_performance_prod.json)\n2. Run detect_anomalies with threshold_sigma=2.0\n3. Verify anomalies match ads with extreme z-scores in fixtures\n4. Run get_ontology and verify dimensional breakdown\n5. Run run_rca on top anomaly and verify root causes identified\n\n## Pass Criteria\n- Anomaly detection aligns with pre-computed z-scores in fixtures\n- Ontology correctly aggregates by all supported dimensions\n- RCA identifies at least one plausible root cause\n- Full agent flow completes without errors\n\n## Fail Action\nFix tool implementations before proceeding to Recommend Agent.\n\n## Target Time\nJan 31, 21:30 IST",
+  "labels": [
+    "gate",
+    "validation",
+    "ai-first",
+    "critical-path",
+    "anomaly"
+  ],
+  "created": "2026-01-31T12:00:00Z",
+  "updated": "2026-01-31T16:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": [
+    "HALO-25"
+  ]
+}

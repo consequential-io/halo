@@ -1,0 +1,13 @@
+{
+  "id": "HALO-55",
+  "title": "RESOLVED: Use GOOD/BAD/OK/WARNING/WAIT classification",
+  "type": "task",
+  "status": "closed",
+  "priority": 0,
+  "description": "Decision made to use simplified classification schema instead of production grades.\n\n## Classification Schema\n| Classification | Meaning | Action |\n|----------------|---------|--------|\n| **GOOD** | High performers | Scale budget 30-100% |\n| **OK** | Average performers | Monitor |\n| **WARNING** | Underperformers | Review creative/targeting |\n| **BAD** | Wasteful spend | Pause or reduce 50-100% |\n| **WAIT** | Learning phase | Need more data |\n\n## Mapping from Production Grades\n| Production | Agatha |\n|------------|--------|\n| grade=A + winners | GOOD |\n| grade=A/B + high_potential | OK |\n| grade=C + underperformers | WARNING |\n| grade=D + losers | BAD |\n| days_active < 7 | WAIT |\n\n## Resolution\nImplementation plan updated with new classification schema, config-driven thresholds, and mapping from production grades. See docs/implementation-plan.md lines 710-850.",
+  "labels": ["resolved", "decision", "classification", "ai-first"],
+  "created": "2026-01-31T14:40:00Z",
+  "updated": "2026-01-31T15:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-8"]
+}

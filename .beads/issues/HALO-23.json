@@ -4,10 +4,10 @@
   "type": "task",
   "status": "open",
   "priority": 2,
-  "description": "Auto-select Meta vs BQ based on availability.\n\n## Pattern\n```python\nasync def get_ad_data(\n    account_id: str,\n    access_token: str = None,\n    days: int = 30,\n    prefer_live: bool = True\n) -> Dict:\n    if prefer_live and access_token:\n        try:\n            return await get_ad_data_from_meta(access_token, account_id, days)\n        except Exception as e:\n            logger.warning(f\"Meta API failed, falling back to BQ: {e}\")\n    \n    return await get_ad_data_from_bq(account_id, days)\n```\n\n## Fallback Logic\n- Try Meta API first if token available\n- Fall back to BigQuery on error\n- Log fallback for debugging",
-  "labels": ["data", "router"],
+  "description": "Auto-select Meta vs BQ based on availability.\n\n## DEFERRED - Post Gate 3\nOnly implement after Gate 3 passes. For hackathon, single data source is sufficient.\n\n## Pattern\n```python\nasync def get_ad_data(\n    account_id: str,\n    access_token: str = None,\n    days: int = 30,\n    prefer_live: bool = True\n) -> Dict:\n    if prefer_live and access_token:\n        try:\n            return await get_ad_data_from_meta(access_token, account_id, days)\n        except Exception as e:\n            logger.warning(f\"Meta API failed, falling back to BQ: {e}\")\n    \n    return await get_ad_data_from_bq(account_id, days)\n```\n\n## Fallback Logic\n- Try Meta API first if token available\n- Fall back to BigQuery on error\n- Log fallback for debugging",
+  "labels": ["data", "router", "deferred"],
   "created": "2026-01-31T08:00:00Z",
-  "updated": "2026-01-31T08:00:00Z",
+  "updated": "2026-01-31T12:00:00Z",
   "parent": "HALO-3",
   "blockedBy": ["HALO-21", "HALO-22"]
 }

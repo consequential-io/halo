@@ -1,0 +1,13 @@
+{
+  "id": "HALO-56",
+  "title": "RESOLVED: Config-driven composite score weights",
+  "type": "task",
+  "status": "closed",
+  "priority": 1,
+  "description": "Composite score calculation is now config-driven for easy tuning.\n\n## Config Structure\n```python\nCLASSIFICATION_CONFIG = {\n    \"composite_score_weights\": {\n        \"z_roas\": 0.5,   # Revenue efficiency most important\n        \"z_ctr\": 0.3,    # Engagement signal\n        \"z_cpa\": -0.2,   # Cost efficiency (negative = lower is better)\n    },\n    # ... other config\n}\n```\n\n## Benefits\n- Different weights per tenant possible\n- A/B testing different scoring models\n- Easy adjustment based on feedback\n\n## Resolution\nConfig structure added to implementation plan. Weights are config-driven with sensible defaults matching production behavior.",
+  "labels": ["resolved", "config", "classification", "scoring"],
+  "created": "2026-01-31T14:40:00Z",
+  "updated": "2026-01-31T15:00:00Z",
+  "parent": "HALO-4",
+  "blockedBy": ["HALO-55"]
+}
