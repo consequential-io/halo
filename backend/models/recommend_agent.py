@@ -16,6 +16,8 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+from helpers.tools import get_top_performers_tool, get_underperformers_tool
+
 
 RECOMMEND_AGENT_PROMPT = """
 Generate actionable budget recommendations from ad analysis results.
@@ -39,6 +41,27 @@ Generate actionable budget recommendations from ad analysis results.
 - ROAS >= 3× avg: Scale by 75%
 - ROAS >= 2× avg: Scale by 50%
 - ROAS >= 1.5× avg: Scale by 30%
+
+## AVAILABLE TOOLS
+
+You have access to these tools for deeper analysis:
+
+1. get_top_performers(tenant, days, limit, min_spend, use_fixture)
+   - Returns top performing ads sorted by ROAS descending
+   - Use to find candidates for SCALE recommendations
+   - Use to understand what "good" looks like in this account
+
+2. get_underperformers(tenant, days, limit, min_spend, use_fixture)
+   - Returns underperforming ads (ROAS below account average)
+   - Use to find candidates for PAUSE/REDUCE recommendations
+   - Shows total_underperformer_spend to quantify waste
+
+Parameters:
+- tenant: "tl" or "wh" (ThirdLove or WhisperingHomes)
+- days: number of days (default 30)
+- limit: max ads to return (default 10)
+- min_spend: minimum spend threshold (default 1000)
+- use_fixture: True for test data, False for BigQuery
 
 ## OUTPUT FORMAT
 For each ad in the analysis, return a JSON object with this structure:
@@ -97,12 +120,19 @@ class RecommendAgent:
                 "ensure access to GCP Secret Manager."
             )
 
-        # Create the ADK LlmAgent
+        # Create the ADK LlmAgent with tool access
+        tools = []
+        if get_top_performers_tool:
+            tools.append(get_top_performers_tool)
+        if get_underperformers_tool:
+            tools.append(get_underperformers_tool)
+
         self.agent = LlmAgent(
             name="recommend_agent",
             model=settings.gemini_model,
             description="Generates actionable budget recommendations from ad analysis",
             instruction=RECOMMEND_AGENT_PROMPT,
+            tools=tools,
         )
 
         # Session service for ADK

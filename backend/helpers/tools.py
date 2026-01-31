@@ -249,8 +249,104 @@ def get_fixture_with_expected() -> Dict[str, Any]:
         return json.load(f)
 
 
-# Create FunctionTool for ADK agent (if available)
+async def get_top_performers(
+    tenant: Literal["tl", "wh"] = "tl",
+    days: int = 30,
+    limit: int = 10,
+    min_spend: float = 1000,
+    use_fixture: bool = True
+) -> Dict[str, Any]:
+    """
+    Get top performing ads by ROAS.
+
+    Args:
+        tenant: Tenant identifier ("tl" for ThirdLove, "wh" for WhisperingHomes)
+        days: Number of days of data to retrieve (default 30)
+        limit: Maximum number of ads to return (default 10)
+        min_spend: Minimum spend threshold to qualify (default 1000)
+        use_fixture: If True, return fixture data; if False, query BigQuery
+
+    Returns:
+        Dict with account_avg_roas and list of top performing ads sorted by ROAS descending
+    """
+    # Get all ad data
+    data = await get_ad_data(tenant, days, use_fixture)
+
+    # Filter by min_spend and sort by ROAS descending
+    ads = data.get("ads", [])
+    qualified_ads = [ad for ad in ads if ad.get("spend", 0) >= min_spend]
+    top_ads = sorted(qualified_ads, key=lambda x: x.get("roas", 0), reverse=True)[:limit]
+
+    return {
+        "account_avg_roas": data.get("account_avg_roas", 0),
+        "total_ads_analyzed": len(qualified_ads),
+        "ads": top_ads,
+        "criteria": {
+            "sorted_by": "roas_descending",
+            "min_spend": min_spend,
+            "limit": limit,
+        },
+    }
+
+
+async def get_underperformers(
+    tenant: Literal["tl", "wh"] = "tl",
+    days: int = 30,
+    limit: int = 10,
+    min_spend: float = 1000,
+    use_fixture: bool = True
+) -> Dict[str, Any]:
+    """
+    Get underperforming ads (low or zero ROAS with significant spend).
+
+    Args:
+        tenant: Tenant identifier ("tl" for ThirdLove, "wh" for WhisperingHomes)
+        days: Number of days of data to retrieve (default 30)
+        limit: Maximum number of ads to return (default 10)
+        min_spend: Minimum spend threshold to qualify (default 1000)
+        use_fixture: If True, return fixture data; if False, query BigQuery
+
+    Returns:
+        Dict with account_avg_roas and list of underperforming ads sorted by ROAS ascending
+    """
+    # Get all ad data
+    data = await get_ad_data(tenant, days, use_fixture)
+    account_avg = data.get("account_avg_roas", 0)
+
+    # Filter by min_spend and find underperformers (ROAS < account avg)
+    ads = data.get("ads", [])
+    qualified_ads = [ad for ad in ads if ad.get("spend", 0) >= min_spend]
+
+    # Underperformers: ROAS below account average, sorted by ROAS ascending (worst first)
+    underperformers = [
+        ad for ad in qualified_ads
+        if ad.get("roas", 0) < account_avg
+    ]
+    bottom_ads = sorted(underperformers, key=lambda x: x.get("roas", 0))[:limit]
+
+    # Calculate total wasted spend (spend on ads with below-avg ROAS)
+    total_underperformer_spend = sum(ad.get("spend", 0) for ad in underperformers)
+
+    return {
+        "account_avg_roas": account_avg,
+        "total_underperformers": len(underperformers),
+        "total_underperformer_spend": total_underperformer_spend,
+        "ads": bottom_ads,
+        "criteria": {
+            "sorted_by": "roas_ascending",
+            "min_spend": min_spend,
+            "below_avg_roas": account_avg,
+            "limit": limit,
+        },
+    }
+
+
+# Create FunctionTools for ADK agents (if available)
 if HAS_ADK:
     get_ad_data_tool = FunctionTool(func=get_ad_data)
+    get_top_performers_tool = FunctionTool(func=get_top_performers)
+    get_underperformers_tool = FunctionTool(func=get_underperformers)
 else:
     get_ad_data_tool = None  # ADK not installed
+    get_top_performers_tool = None
+    get_underperformers_tool = None

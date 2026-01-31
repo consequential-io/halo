@@ -17,6 +17,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from helpers.validators import validate_analyze_output, handle_validation_failure
+from helpers.tools import get_ad_data_tool
 
 
 ANALYZE_AGENT_PROMPT = """
@@ -37,6 +38,15 @@ You are analyzing ad performance data. Your classifications MUST be grounded in 
 - WAIT: spend < $1k OR days < 7 → WAIT
 
 IMPORTANT: recommended_action must be exactly ONE of: SCALE, MONITOR, REVIEW, REDUCE, PAUSE, WAIT (never combine like "REDUCE/PAUSE")
+
+## AVAILABLE TOOL
+
+You have access to: get_ad_data(tenant, days, use_fixture)
+- tenant: "tl" or "wh" (ThirdLove or WhisperingHomes)
+- days: number of days of data (default 30)
+- use_fixture: True for test data, False for BigQuery
+
+Use this tool if you need to fetch additional ad data for deeper analysis.
 
 These are GUIDELINES. You may deviate with clear reasoning (e.g., "1.95× avg with upward trend → GOOD").
 
@@ -90,12 +100,14 @@ class AnalyzeAgent:
                 "ensure access to GCP Secret Manager."
             )
 
-        # Create the ADK LlmAgent
+        # Create the ADK LlmAgent with tool access
+        tools = [get_ad_data_tool] if get_ad_data_tool else []
         self.agent = LlmAgent(
             name="analyze_agent",
             model=settings.gemini_model,
             description="Analyzes ad performance data and classifies as GOOD/OK/WARNING/BAD/WAIT with chain-of-thought reasoning",
             instruction=ANALYZE_AGENT_PROMPT,
+            tools=tools,
         )
 
         # Session service for ADK
