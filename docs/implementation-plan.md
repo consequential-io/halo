@@ -34,22 +34,27 @@ Each metric type requires filtering by authoritative source to avoid double-coun
 | Metric Type | Filter | Columns |
 |-------------|--------|---------|
 | **Advertising** | `WHERE data_source = 'Ad Providers'` | spend, ad_click, CPA, CPC, CPM, CTR, ROAS |
-| **Revenue** | `WHERE data_source = 'Shopify'` | gross_sales, net_sales, total_sales, order_id |
+| **Revenue** | `WHERE data_source IN ('Shopify', 'Zoho')` | gross_sales, net_sales, total_sales, order_id |
 | **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
 
-### Sample Ad Performance Query
+**Tenant-specific revenue sources:**
+- TL (ThirdLove): `Shopify`
+- WH (WhisperingHomes): `Zoho`
+
+**Note:** All columns are STRING type - use SAFE_CAST for numeric operations.
+
+### Sample Ad Performance Query (Validated)
 ```sql
 SELECT
     ad_name,
     ad_provider,
-    SUM(spend) as total_spend,
-    SUM(ROAS) as total_roas,
-    SUM(ad_click) as clicks,
-    AVG(CPC) as avg_cpc,
-    AVG(CTR) as avg_ctr
+    SUM(SAFE_CAST(spend AS FLOAT64)) as total_spend,
+    AVG(SAFE_CAST(ROAS AS FLOAT64)) as avg_roas,
+    SUM(SAFE_CAST(ad_click AS INT64)) as clicks
 FROM `otb-dev-platform.master.northstar_master_combined_tl`
 WHERE data_source = 'Ad Providers'
-  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', datetime_UTC)
+      >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
 GROUP BY ad_name, ad_provider
 ORDER BY total_spend DESC
 ```
