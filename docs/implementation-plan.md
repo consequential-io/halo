@@ -76,35 +76,119 @@ MODEL_CONFIG = {
 
 ## Implementation Tasks (Beads Issues)
 
+### Epic: HALO-E0 - Project Scaffolding (Create Extensible Structure)
+
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-0.1** | Create backend directory structure | All `__init__.py` files, empty modules | None |
+| **HALO-0.2** | Create `pyproject.toml` with dependencies | google-adk, fastapi, uvicorn, httpx, pydantic | Which google-adk version? Check otb-agents |
+| **HALO-0.3** | Create `.env.example` with all env vars | Template for local dev | Need full list of secrets |
+| **HALO-0.4** | Create frontend with Next.js scaffold | `npx create-next-app@latest` | Use App Router or Pages? (App Router recommended) |
+| **HALO-0.5** | Create stub files for all modules | Empty classes/functions with docstrings | None |
+| **HALO-0.6** | Setup pytest and test directory structure | `conftest.py`, sample test | None |
+| **HALO-0.7** | Create Dockerfiles (backend + frontend) | Working docker build | Base image versions? |
+| **HALO-0.8** | Create `cloudbuild.yaml` | Deploy config | Which GCP project? Region? |
+
 ### Epic: HALO-E1 - Backend Foundation
-1. **HALO-1**: Project scaffolding (pyproject.toml, FastAPI app structure)
-2. **HALO-2**: Session manager (singleton pattern from otb-agents)
-3. **HALO-3**: Base controller with `run_agent_flow()`
-4. **HALO-4**: BigQuery data connector tool
-5. **HALO-5**: Meta API read connector tool (with OAuth)
 
-### Epic: HALO-E2 - Agents
-6. **HALO-6**: Analyze Agent - classify spend as good/bad/monitor
-7. **HALO-7**: Recommend Agent - generate budget + creative recommendations
-8. **HALO-8**: Execute Agent - mock write with confirmation
-9. **HALO-9**: Agatha Orchestrator - coordinate agent flow
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-1** | Implement `config/settings.py` | Pydantic Settings with env vars | Full list of config keys needed? |
+| **HALO-2** | Implement `config/session_manager.py` | Singleton SessionManager class | Same pattern as otb-agents? |
+| **HALO-3** | Implement `config/logging_config.py` | JSON formatter, setup function | Log level configurable via env? |
+| **HALO-4** | Implement `controllers/base_controller.py` | `run_agent_flow()` method | Copy from otb-agents or adapt? |
+| **HALO-5** | Implement `main.py` | FastAPI app with health endpoint | CORS settings for frontend? |
 
-### Epic: HALO-E3 - API Routes
-10. **HALO-10**: `/auth/meta` - OAuth flow
-11. **HALO-11**: `/analyze` - trigger analysis
-12. **HALO-12**: `/recommendations` - get recommendations
-13. **HALO-13**: `/execute` - approve and execute
+**Open Questions for E1:**
+- [ ] Do we need authentication middleware for API routes?
+- [ ] Should we add rate limiting?
+- [ ] Error response schema - match otb-agents or custom?
 
-### Epic: HALO-E4 - Frontend (Minimal)
-14. **HALO-14**: Login page with Meta OAuth button
-15. **HALO-15**: Dashboard with account selector
-16. **HALO-16**: Recommendations view with approve/reject
-17. **HALO-17**: Execution confirmation view
+### Epic: HALO-E2 - Data Tools
 
-### Epic: HALO-E5 - Integration & Demo
-18. **HALO-18**: End-to-end integration testing
-19. **HALO-19**: Demo script and fallback preparation
-20. **HALO-20**: README and submission materials
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-6** | Implement BigQuery connector tool | `get_ad_data_from_bq()` function | Which BQ dataset/table? Need credentials path |
+| **HALO-7** | Implement Meta API read tool | `get_ad_data_from_meta()` function | OAuth token storage? Refresh flow? |
+| **HALO-8** | Implement data source router | Auto-select Meta vs BQ based on availability | Fallback logic - timeout or error-based? |
+| **HALO-9** | Create test fixtures from BQ data | JSON files with sample ad data | Which accounts to export? TL + WH? |
+
+**Open Questions for E2:**
+- [ ] BigQuery: Which project/dataset/table contains the ad data?
+- [ ] BigQuery: Service account key or ADC for auth?
+- [ ] Meta API: App ID and App Secret - where stored?
+- [ ] Meta API: Which API version? (v18.0, v19.0?)
+- [ ] Data schema: Need to map BQ fields to Meta API fields?
+
+### Epic: HALO-E3 - Agents
+
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-10** | Implement Analyze Agent | `AnalyzeAgentModel` class with prompt | Prompt template - where to store? |
+| **HALO-11** | Implement `classify_spend()` logic | Pure function with thresholds | Thresholds configurable via env? |
+| **HALO-12** | Implement Recommend Agent | `RecommendAgentModel` class with prompt | How detailed should recommendations be? |
+| **HALO-13** | Implement creative fatigue detection | Function to flag fatigued creatives | CTR decline threshold - 30% correct? |
+| **HALO-14** | Implement Execute Agent | `ExecuteAgentModel` with mock write | Mock response format? |
+| **HALO-15** | Implement Agatha Orchestrator | `AgathaController` coordinating all agents | Sequential or can agents run in parallel? |
+
+**Open Questions for E3:**
+- [ ] Prompt storage: Inline in code, or external files/service (like fi.prompt)?
+- [ ] Agent instructions: How detailed? Include examples in prompt?
+- [ ] Output format: JSON schema for each agent's response?
+- [ ] Error handling: What if one agent fails mid-flow?
+- [ ] Session state: What data passes between agents?
+
+### Epic: HALO-E4 - API Routes
+
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-16** | Implement `/auth/meta/login` | Redirect to Meta OAuth | Callback URL for hackathon? |
+| **HALO-17** | Implement `/auth/meta/callback` | Handle OAuth callback, store token | Token storage - session? DB? Memory? |
+| **HALO-18** | Implement `/api/analyze` | Trigger analysis, return results | Sync or async? Polling for results? |
+| **HALO-19** | Implement `/api/recommendations` | Get recommendations for account | Pagination needed? |
+| **HALO-20** | Implement `/api/execute` | Execute approved recommendations | Request body schema? |
+| **HALO-21** | Implement `/api/accounts` | List connected ad accounts | Cache account list? |
+
+**Open Questions for E4:**
+- [ ] Auth: Protect routes with OAuth token validation?
+- [ ] CORS: Allow frontend origin only?
+- [ ] Response schema: Pydantic models for all responses?
+- [ ] Async execution: Long-running analysis - websocket or polling?
+
+### Epic: HALO-E5 - Frontend (Minimal)
+
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-22** | Setup shadcn/ui components | Install and configure | Which components needed? |
+| **HALO-23** | Implement Login page | Meta OAuth button, redirect | Branding/logo for demo? |
+| **HALO-24** | Implement Dashboard layout | Header, sidebar, main content area | Show account selector in header? |
+| **HALO-25** | Implement Analysis view | Display analysis results | Visualization - charts or tables? |
+| **HALO-26** | Implement Recommendations list | Cards with approve/reject buttons | Bulk approve option? |
+| **HALO-27** | Implement Execution confirmation | Success/failure messages | Animation/celebration on success? |
+| **HALO-28** | Implement API client | Fetch wrapper with auth headers | Use SWR or React Query? |
+
+**Open Questions for E5:**
+- [ ] Styling: Tailwind default or custom theme?
+- [ ] State management: React Context sufficient or need Zustand?
+- [ ] Loading states: Skeleton loaders or spinners?
+- [ ] Error handling: Toast notifications or inline errors?
+
+### Epic: HALO-E6 - Integration & Demo
+
+| Task | Description | Deliverable | Open Questions |
+|------|-------------|-------------|----------------|
+| **HALO-29** | Write unit tests for classify_spend | pytest tests with edge cases | Coverage target? |
+| **HALO-30** | Write integration tests for agent flow | AsyncMock-based tests | Which scenarios to test? |
+| **HALO-31** | Create demo script | Step-by-step demo walkthrough | Demo duration target? |
+| **HALO-32** | Record fallback demo video | Screen recording if live fails | Loom or local recording? |
+| **HALO-33** | Write README.md | Project overview, setup instructions | Include architecture diagram? |
+| **HALO-34** | Create pitch deck (6 slides) | Problem, Insight, Demo, Tech, Value, Next | Use existing template? |
+| **HALO-35** | Write AI Impact Statement | 200 words on AI usage | Guardrails section - what to include? |
+
+**Open Questions for E6:**
+- [ ] Demo account: Use real TL/WH data or synthetic?
+- [ ] Demo scenario: Show $88k TikTok waste discovery?
+- [ ] Fallback: Pre-recorded or BigQuery-backed live?
 
 ## File Structure
 
@@ -229,15 +313,27 @@ def classify_spend(ad_data, account_avg_roas):
 ## Dependencies Between Tasks
 
 ```
-HALO-1 (scaffolding)
-    └── HALO-2 (session) + HALO-3 (base controller)
-           └── HALO-4 (BQ tool) + HALO-5 (Meta tool)
-                  └── HALO-6 (Analyze) → HALO-7 (Recommend) → HALO-8 (Execute)
-                         └── HALO-9 (Orchestrator)
-                                └── HALO-10-13 (Routes)
-                                       └── HALO-14-17 (Frontend)
-                                              └── HALO-18-20 (Integration)
+HALO-E0 (Scaffolding: 0.1-0.8)
+    │
+    ├── HALO-E1 (Foundation: 1-5)
+    │       │
+    │       └── HALO-E2 (Data Tools: 6-9)
+    │               │
+    │               └── HALO-E3 (Agents: 10-15)
+    │                       │
+    │                       └── HALO-E4 (Routes: 16-21)
+    │
+    └── HALO-E5 (Frontend: 22-28) ──── depends on E4 routes
+            │
+            └── HALO-E6 (Integration: 29-35)
 ```
+
+**Parallel Work Opportunities:**
+- E0 (Scaffolding) → can split between team members
+- E1 + E5 initial setup → can run in parallel
+- E2 (BQ tool) + E2 (Meta tool) → can run in parallel
+- E3 (Agents) → sequential (Analyze → Recommend → Execute)
+- E6 (Tests + Demo prep) → can start once E3 is done
 
 ## Foundational Elements
 
