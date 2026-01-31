@@ -101,34 +101,119 @@ def print_rca_result(result: dict):
         print(f"   {action}")
 
 
+def normalize_root_cause(cause: str, anomaly: dict = None) -> str:
+    """Normalize root cause to a standard category."""
+    cause_lower = cause.lower()
+
+    # CPM/Auction competition patterns
+    if any(term in cause_lower for term in ["cpm", "auction", "competition", "bidding", "bid"]):
+        return "CPM_SPIKE"
+    # Also check if it's a CPM anomaly and mentions cost/increase
+    if anomaly and anomaly.get("metric") == "cpm" and any(term in cause_lower for term in ["increase", "spike", "high", "cost"]):
+        return "CPM_SPIKE"
+    # CPA issues often caused by CPM
+    if anomaly and anomaly.get("metric") == "cpa" and any(term in cause_lower for term in ["cost", "increase", "spike", "competition"]):
+        return "CPM_SPIKE"
+
+    if "creative" in cause_lower and "fatigue" in cause_lower:
+        return "CREATIVE_FATIGUE"
+    if any(term in cause_lower for term in ["ctr", "engagement"]) and any(term in cause_lower for term in ["drop", "declin", "fatigue"]):
+        return "CREATIVE_FATIGUE"
+
+    if "budget" in cause_lower and any(term in cause_lower for term in ["exhaust", "cap", "limit", "spent"]):
+        return "BUDGET_EXHAUSTION"
+
+    if any(term in cause_lower for term in ["landing", "funnel", "conversion", "checkout", "cart"]):
+        return "LANDING_PAGE_ISSUE"
+
+    if any(term in cause_lower for term in ["tracking", "pixel", "attribution"]):
+        return "TRACKING_ISSUE"
+
+    if "season" in cause_lower:
+        return "SEASONALITY"
+
+    if "audience" in cause_lower and any(term in cause_lower for term in ["exhaust", "saturat", "frequen"]):
+        return "AUDIENCE_EXHAUSTION"
+
+    if "unknown" in cause_lower or cause == "UNKNOWN":
+        return "UNKNOWN"
+
+    return "OTHER"
+
+
+def get_cause_display(cause_key: str) -> tuple:
+    """Get display name and icon for a root cause category."""
+    cause_info = {
+        "CPM_SPIKE": ("💰 CPM Spike (Increased Auction Competition)", "Adjust bids or targeting to reduce costs"),
+        "CREATIVE_FATIGUE": ("🎨 Creative Fatigue", "Refresh creatives with new variants"),
+        "BUDGET_EXHAUSTION": ("💸 Budget Exhaustion", "Review and increase budget caps"),
+        "LANDING_PAGE_ISSUE": ("🌐 Landing Page Issue", "Check landing page load time and UX"),
+        "TRACKING_ISSUE": ("🔧 Tracking Issue", "Verify pixel/conversion tracking setup"),
+        "SEASONALITY": ("📅 Seasonality", "Expected fluctuation - monitor trends"),
+        "AUDIENCE_EXHAUSTION": ("👥 Audience Exhaustion", "Expand targeting or find new audiences"),
+        "UNKNOWN": ("❓ Unknown", "Manual investigation required"),
+        "OTHER": ("📋 Other", "Review individual cases"),
+    }
+    return cause_info.get(cause_key, ("📋 " + cause_key, "Review details"))
+
+
 def print_full_rca(rca_result: dict):
-    """Pretty print full RCA pipeline results."""
+    """Pretty print full RCA pipeline results - grouped by root cause."""
     summary = rca_result.get("detection_summary", {})
 
     print("\n" + "=" * 70)
     print("🔬 RCA PIPELINE RESULTS")
     print("=" * 70)
-    print(f"Total Anomalies Detected: {summary.get('total_anomalies', 0)}")
+    print(f"Total Bad Anomalies Detected: {summary.get('total_anomalies', 0)}")
     print(f"Anomalies Investigated: {summary.get('investigated', 0)}")
     print(f"Baseline: {summary.get('baseline_period', 'N/A')}")
     print(f"Current: {summary.get('current_period', 'N/A')}")
 
     results = rca_result.get("results", [])
-    for result in results:
-        print_rca_result(result)
 
-    # Summary
+    # Group by normalized root cause
+    grouped = {}
+    for result in results:
+        raw_cause = result.get("investigation", {}).get("root_cause", "UNKNOWN")
+        anomaly = result.get("anomaly", {})
+        cause_key = normalize_root_cause(raw_cause, anomaly)
+        if cause_key not in grouped:
+            grouped[cause_key] = []
+        grouped[cause_key].append(result)
+
+    # Print grouped results
     print("\n" + "=" * 70)
-    print("📊 SUMMARY")
+    print("📊 ROOT CAUSES (Grouped)")
     print("=" * 70)
 
-    causes = {}
-    for result in results:
-        cause = result.get("investigation", {}).get("root_cause", "UNKNOWN")
-        causes[cause] = causes.get(cause, 0) + 1
+    for cause_key, items in sorted(grouped.items(), key=lambda x: -len(x[1])):
+        display_name, recommendation = get_cause_display(cause_key)
 
-    for cause, count in sorted(causes.items(), key=lambda x: -x[1]):
-        print(f"   {cause}: {count} anomal{'y' if count == 1 else 'ies'}")
+        print(f"\n{display_name}")
+        print(f"   Affected Ads: {len(items)}")
+        print(f"   💡 Action: {recommendation}")
+        print("   " + "-" * 50)
+
+        for item in items:
+            anomaly = item.get("anomaly", {})
+            investigation = item.get("investigation", {})
+            ad_name = anomaly.get("ad_name", "Unknown")[:40]
+            metric = anomaly.get("metric", "N/A").upper()
+            direction = anomaly.get("direction", "")
+            pct = abs(anomaly.get("pct_change", 0))
+            confidence = investigation.get("confidence", "LOW")
+            conf_icon = {"HIGH": "✅", "MEDIUM": "⚠️", "LOW": "❓"}.get(confidence, "❓")
+
+            print(f"   • {ad_name}")
+            print(f"     {metric} {direction} {pct:.0f}% | Confidence: {conf_icon} {confidence}")
+
+    # Quick summary
+    print("\n" + "=" * 70)
+    print("📈 QUICK SUMMARY")
+    print("=" * 70)
+    for cause_key, items in sorted(grouped.items(), key=lambda x: -len(x[1])):
+        display_name, _ = get_cause_display(cause_key)
+        print(f"   {len(items)} anomal{'y' if len(items) == 1 else 'ies'} → {display_name.split(' ', 1)[1] if ' ' in display_name else display_name}")
 
 
 async def run_detection_only(args):

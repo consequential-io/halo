@@ -249,13 +249,21 @@ class AnomalyDetector:
                 # Determine direction
                 direction = "DROP" if z_score < 0 else "SPIKE"
 
-                # For CPA and CPM, a spike is bad; for ROAS, spend, CTR, a drop is bad
-                if metric in ["cpa", "cpm"]:
+                # For CPA and CPM, a spike is bad; for ROAS, CTR, a drop is bad
+                # Spend drop could be intentional, so we skip it
+                if metric == "spend":
+                    # Skip spend anomalies - drops could be intentional budget changes
+                    continue
+                elif metric in ["cpa", "cpm"]:
                     # High CPA/CPM is bad
                     is_bad = z_score > 0
                 else:
-                    # Low ROAS/spend/CTR is bad
+                    # Low ROAS/CTR is bad
                     is_bad = z_score < 0
+
+                # Only capture BAD anomalies (negatively impacting business)
+                if not is_bad:
+                    continue
 
                 # Determine severity
                 severity = "LOW"
