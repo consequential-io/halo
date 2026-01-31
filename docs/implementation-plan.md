@@ -5,6 +5,361 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 
 **Approach:** AI-First Implementation (validate AI value before infrastructure)
 
+---
+
+## AI-First Architecture
+
+### The Core Principle
+
+**LLM reasons, Python validates.** Not the other way around.
+
+```
+WRONG (AI-wrapped rules):
+  Data → Python classify_spend() → Python assign_grade() → LLM formats output
+         ↑ Deterministic rules      ↑ More rules           ↑ Just formatting
+
+RIGHT (AI-first):
+  Data → LLM reasons with guidelines → Python validates → Output
+         ↑ Uses judgment + context     ↑ Catches hallucinations
+```
+
+### Why This Matters
+
+| Task | Rules-Based (Wrong) | AI-First (Right) |
+|------|---------------------|------------------|
+| Classification | Python threshold check | LLM reasons about data with guidelines |
+| Edge cases | Falls through to default | LLM handles nuance (1.95× avg = maybe GOOD) |
+| Explanations | Template strings | LLM generates natural insights |
+| Trends | Not detected | LLM spots "ROAS declining 3 weeks" |
+| Creative analysis | Just "fatigued" flag | LLM explains what's wrong |
+
+---
+
+## Hallucination Prevention Strategy
+
+### The Problem
+LLMs can invent plausible-sounding recommendations not grounded in data:
+- "This ad is underperforming" (based on what numbers?)
+- "You should scale by 50%" (why 50%?)
+- "Creative fatigue detected" (what signals?)
+
+### Solution: Data-Grounded Prompts + Validation Layer
+
+Every agent response MUST:
+1. Cite the actual metrics it's reasoning about
+2. Show step-by-step logic the user can verify
+3. Pass post-LLM validation that checks cited numbers match source data
+
+### Validation Layer (Post-LLM Check)
+
+```python
+# backend/helpers/validators.py
+
+def validate_grounded_response(llm_response: dict, source_data: dict) -> tuple[bool, list[str]]:
+    """
+    Verify LLM claims are grounded in actual data.
+    Returns (is_valid, list_of_violations)
+    """
+    violations = []
+
+    for ad in llm_response.get("ads", []):
+        ad_name = ad["ad_name"]
+        source_ad = find_ad_in_source(ad_name, source_data)
+
+        if not source_ad:
+            violations.append(f"Ad '{ad_name}' not found in source data")
+            continue
+
+        # Verify cited numbers match reality (with tolerance for rounding)
+        if abs(ad["metrics"]["spend"] - source_ad["spend"]) > 1:
+            violations.append(f"Spend mismatch for '{ad_name}': cited {ad['metrics']['spend']}, actual {source_ad['spend']}")
+
+        if abs(ad["metrics"]["roas"] - source_ad["roas"]) > 0.01:
+            violations.append(f"ROAS mismatch for '{ad_name}': cited {ad['metrics']['roas']}, actual {source_ad['roas']}")
+
+    return (len(violations) == 0, violations)
+```
+
+---
+
+## Chain-of-Thought (CoT) Reasoning
+
+### Why CoT Matters
+Users need to trust recommendations. Showing reasoning:
+- Builds confidence in the system
+- Allows users to catch errors
+- Makes the "why" as valuable as the "what"
+
+### 6-Step Reasoning Chain
+
+Every ad analysis must follow this structure:
+
+| Step | Question | Output |
+|------|----------|--------|
+| **1. Data Extraction** | What are the actual metrics? | spend, roas, days_active, account_avg |
+| **2. Threshold Comparison** | How does ROAS compare to account avg? | roas_ratio = ad_roas / account_avg |
+| **3. Qualification Check** | Is there enough data to decide? | spend >= $1k AND days >= 7 |
+| **4. Classification** | What category does this fall into? | GOOD / OK / WARNING / BAD / WAIT |
+| **5. Recommendation** | What action should be taken? | Scale / Monitor / Review / Reduce / Pause |
+| **6. Confidence** | How certain is this classification? | HIGH / MEDIUM / LOW with rationale |
+
+### Example CoT Output
+
+```json
+{
+  "ad_name": "TikTok Campaign Q4",
+  "chain_of_thought": {
+    "step_1_data": {
+      "spend": 88000,
+      "roas": 0.0,
+      "days_active": 45,
+      "account_avg_roas": 6.88
+    },
+    "step_2_comparison": {
+      "roas_ratio": "0.0 / 6.88 = 0.0",
+      "vs_good_threshold": "0.0 < 2.0 ❌",
+      "is_zero_roas": true
+    },
+    "step_3_qualification": {
+      "spend_qualified": "$88,000 >= $5,000 ✓",
+      "days_qualified": "45 >= 7 ✓",
+      "fully_qualified": true
+    },
+    "step_4_classification": {
+      "logic": "ROAS = 0 AND spend >= $5k AND days >= 7 → BAD (PAUSE rule)",
+      "result": "BAD"
+    },
+    "step_5_recommendation": {
+      "action": "PAUSE",
+      "rationale": "Zero return on $88k investment over 45 days."
+    },
+    "step_6_confidence": {
+      "level": "HIGH",
+      "rationale": "Zero ROAS is unambiguous. High spend provides certainty."
+    }
+  },
+  "summary": "PAUSE this campaign. $88,000 spent over 45 days with zero return."
+}
+```
+
+---
+
+## Decision Thresholds (Guidelines, Not Absolutes)
+
+### Scope
+- **In scope:** Ads data only (BigQuery ad platform metrics)
+- **Out of scope:** Shopify attribution data (for now)
+
+### Account Baseline (ThirdLove Reference)
+- Total spend: $4.5M over 298 days
+- Overall ROAS: 6.90 (ad platform)
+- Unique ads: 1,083
+
+### Decision Matrix
+
+| ROAS vs Account Avg | Spend | Days | Status | Action |
+|---------------------|-------|------|--------|--------|
+| >= 2× (>= 13.8) | >= $1k | >= 7 | 🟢 GOOD | Scale 30-100% |
+| 1× - 2× (6.9 - 13.8) | >= $1k | >= 7 | 🟡 OK | Monitor |
+| 0.5× - 1× (3.45 - 6.9) | >= $10k | >= 7 | 🟠 WARNING | Review |
+| < 0.5× (< 3.45) | >= $10k | >= 7 | 🔴 BAD | Reduce 50% |
+| = 0 | >= $5k | >= 7 | 🔴 BAD | Pause |
+| Any | < $1k | < 7 | ⚪ WAIT | Learning |
+
+**IMPORTANT:** These are GUIDELINES for the LLM, not absolute rules. The LLM may use judgment for:
+- Ads just below thresholds (1.95× might still be GOOD)
+- Trending ads (declining ROAS over time)
+- Funnel position (TOF expected to have lower ROAS)
+- Seasonality patterns
+
+### Funnel-Aware Expectations
+
+| Funnel | Creative Types | Expected ROAS | Threshold Adjustment |
+|--------|----------------|---------------|----------------------|
+| BOF | Search, Shopping, Brand | 5-20+ | Use standard thresholds |
+| TOF | Video, Prospecting, TikTok | 0-5 | Lower threshold (1× avg = OK) |
+
+---
+
+## Analyze Agent Prompt Template
+
+```python
+ANALYZE_AGENT_PROMPT = """
+You are analyzing ad performance data. Your classifications MUST be grounded in the actual metrics provided.
+
+## RULES
+1. NEVER invent metrics - only use values from the provided data
+2. ALWAYS cite the specific numbers when making claims
+3. ALWAYS compare to the account average (provided in context)
+4. If data is insufficient, say "WAIT - need more data" instead of guessing
+
+## CLASSIFICATION GUIDELINES (use judgment, not rigid rules)
+
+🟢 GOOD SPEND (Scale 30-100%):
+- ROAS >= 2× account average AND spend >= $1,000 AND running >= 7 days
+- Example: "Thirdlove® Bras" — $212k spend, 29.58 ROAS (4.3× avg) → SCALE
+
+🟡 OK (Monitor):
+- ROAS 1-2× account average, qualified spend/time
+- No action needed, performing adequately
+
+🟠 WARNING (Review):
+- ROAS 0.5-1× account average after significant spend ($10k+)
+- May need creative refresh or audience adjustment
+
+🔴 BAD SPEND (Pause/Reduce):
+- ROAS = 0 after $5k+ spend AND 7+ days → PAUSE
+- ROAS < 0.5× account average after $10k+ → REDUCE 50%
+- Example: TikTok ads — $88k spend, 0.00 ROAS after 45 days → PAUSE
+
+⚪ WAIT (Learning phase):
+- spend < $1,000 OR running < 7 days
+- Insufficient data to classify
+
+## USE JUDGMENT FOR:
+- Borderline cases (1.95× avg might still merit GOOD)
+- Trend detection (ROAS declining week-over-week)
+- Funnel context (TOF campaigns have lower ROAS by design)
+
+## OUTPUT FORMAT
+For each ad, include:
+{
+  "ad_name": "<exact name from data>",
+  "metrics": {
+    "spend": <actual value>,
+    "roas": <actual value>,
+    "days_active": <actual value>,
+    "account_avg_roas": <actual value>
+  },
+  "chain_of_thought": {
+    "step_1_data": {...},
+    "step_2_comparison": {...},
+    "step_3_qualification": {...},
+    "step_4_classification": {...},
+    "step_5_recommendation": {...},
+    "step_6_confidence": {...}
+  },
+  "classification": "GOOD|OK|WARNING|BAD|WAIT",
+  "recommended_action": "SCALE|MONITOR|REVIEW|REDUCE|PAUSE|WAIT",
+  "confidence": "HIGH|MEDIUM|LOW",
+  "user_explanation": "<1-2 sentence explanation citing specific numbers>"
+}
+"""
+```
+
+---
+
+## Few-Shot Examples (Critical for Grounding)
+
+```python
+FEW_SHOT_EXAMPLES = """
+## Example 1: GOOD SPEND
+Input: Ad "Thirdlove® Bras" — $212k spend, 29.58 ROAS, 30 days, account avg 6.88
+
+Analysis:
+{
+  "ad_name": "Thirdlove® Bras",
+  "metrics": {"spend": 212000, "roas": 29.58, "days_active": 30, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "step_2_comparison": {"roas_ratio": "29.58 / 6.88 = 4.3×"},
+    "step_3_qualification": {"spend_qualified": true, "days_qualified": true},
+    "step_4_classification": {"result": "GOOD", "logic": "4.3× avg, exceeds 2× threshold"}
+  },
+  "classification": "GOOD",
+  "recommended_action": "SCALE",
+  "confidence": "HIGH",
+  "user_explanation": "ROAS of 29.58 is 4.3× your account average. Scale budget 50-100%."
+}
+
+## Example 2: BAD SPEND (Zero ROAS)
+Input: Ad "TikTok Campaign Q4" — $88k spend, 0.00 ROAS, 45 days, account avg 6.88
+
+Analysis:
+{
+  "ad_name": "TikTok Campaign Q4",
+  "metrics": {"spend": 88000, "roas": 0.0, "days_active": 45, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "step_2_comparison": {"roas_ratio": "0.0 / 6.88 = 0×", "is_zero_roas": true},
+    "step_3_qualification": {"spend_qualified": true, "days_qualified": true},
+    "step_4_classification": {"result": "BAD", "logic": "Zero ROAS after $88k and 45 days"}
+  },
+  "classification": "BAD",
+  "recommended_action": "PAUSE",
+  "confidence": "HIGH",
+  "user_explanation": "Zero return on $88k over 45 days. Pause immediately."
+}
+
+## Example 3: WAIT (Insufficient Data)
+Input: Ad "New Spring Collection" — $800 spend, 2.50 ROAS, 4 days, account avg 6.88
+
+Analysis:
+{
+  "ad_name": "New Spring Collection",
+  "metrics": {"spend": 800, "roas": 2.50, "days_active": 4, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "step_3_qualification": {"spend_qualified": false, "days_qualified": false},
+    "step_4_classification": {"result": "WAIT", "logic": "Only 4 days and $800 spend"}
+  },
+  "classification": "WAIT",
+  "recommended_action": "WAIT",
+  "confidence": "LOW",
+  "user_explanation": "Only 4 days active with $800 spend. Need 3 more days before classification."
+}
+"""
+```
+
+---
+
+## Recommend Agent Grounding
+
+Recommendations must include source data and calculations:
+
+```python
+RECOMMEND_AGENT_PROMPT = """
+Generate actionable recommendations based on the Analyze Agent output.
+
+For each recommendation, you MUST include:
+1. Source ad data (from Analyze output)
+2. Calculation showing how recommendation was derived
+3. Dollar impact estimate
+
+## Example Grounded Recommendation:
+
+"Scale 'Thirdlove® Bras' budget by 75%"
+- Current spend: $212,000
+- ROAS: 29.58 (4.3× account avg)
+- Proposed increase: $159,000 (75% of current)
+- Expected additional revenue: $159,000 × 29.58 = $4.7M
+- Confidence: HIGH (strong historical performance over 30 days)
+
+## Output Format:
+{
+  "ad_name": "...",
+  "action": "SCALE|REDUCE|PAUSE",
+  "current_spend": <number>,
+  "change_percentage": <number>,
+  "proposed_new_spend": <number>,
+  "expected_impact": {
+    "calculation": "<show the math>",
+    "estimated_revenue_change": <number>
+  },
+  "confidence": "HIGH|MEDIUM|LOW",
+  "rationale": "<cite specific metrics>"
+}
+"""
+```
+
+---
+
+## Known Gaps & Mitigations
+
+| Gap | Description | Mitigation |
+|-----|-------------|------------|
+| **Threshold tension** | LLM judgment vs validation layer may conflict (1.95× classified as GOOD but validation expects BAD) | Validation checks metric accuracy, not classification correctness. Allow reasoned deviations. |
+| **No fallback strategy** | What if LLM produces invalid output after retry? | Add graceful degradation: after 2 retries, return raw data with "manual review needed" flag |
+| **Funnel still Python** | `classify_funnel()` is hardcoded string matching | Acceptable for v1. Can move to LLM in future if patterns are ambiguous |
+| **Multi-metric conflicts** | What if ROAS is great but CTR is terrible? | CoT step 6 (confidence) should note conflicting signals → MEDIUM confidence |
+
 ## Decisions Made
 
 | # | Question | Decision |
@@ -312,13 +667,15 @@ MODEL_CONFIG = {
 | Demo ready | Feb 1, 08:30 | 1h | Buffer |
 | **DEMO** | Feb 1, 09:00 | - | - |
 
-### Gate Definitions
+### Gate Definitions (AI-First)
 
-| Gate | Question | Pass | Fail Action |
-|------|----------|------|-------------|
-| **Gate 1** | Does Analyze Agent produce correct grades vs fixtures? | Grades/segments match production API | Fix classification logic before proceeding |
-| **Gate 2** | Are recommendations actionable and sensible? | Human review approves | Simplify recommendation logic |
-| **Gate 3** | Does live BigQuery data produce same quality? | Comparable output | Use fixtures for demo (fallback) |
+| Gate | Question | Pass Criteria | Fail Action |
+|------|----------|---------------|-------------|
+| **Gate 1** | Does Analyze Agent produce grounded, reasoned output? | (1) CoT reasoning chain complete (all 6 steps), (2) Cited metrics match source data, (3) Classifications are sensible given the reasoning | Fix prompt template, add more few-shot examples |
+| **Gate 2** | Are recommendations grounded and actionable? | (1) Cites source metrics, (2) Shows calculation for impact, (3) Human review approves logic | Simplify recommendation prompt |
+| **Gate 3** | Does live BigQuery data produce same quality? | Comparable output quality | Use fixtures for demo (fallback) |
+
+**Key change from old gates:** We're testing LLM reasoning quality + grounding accuracy, not just whether output matches fixtures. The LLM should be able to handle novel data sensibly.
 
 ### Critical Path
 
@@ -364,10 +721,25 @@ NOW (17:30)
 |------|-------------|-------------|
 | **P1-1** | Minimal pyproject.toml + settings | Just enough to run agents |
 | **P1-2** | Mock data tool (returns fixture JSON) | `get_ad_data()` tool |
-| **P1-3** | Analyze Agent with classification logic | Grades, segments, scores |
-| **P1-4** | GATE 1: Validate vs fixtures | Compare output to production API |
-| **P1-5** | Recommend Agent | Budget + creative recommendations |
+| **P1-3** | Analyze Agent with AI-first prompts | See sub-tasks below |
+| **P1-4** | GATE 1: Validate grounding + reasoning | CoT complete, metrics accurate |
+| **P1-5** | Recommend Agent with grounded output | Budget recs with calculations |
 | **P1-6** | GATE 2: Human review | Are recommendations actionable? |
+
+#### P1-3 Sub-tasks (Analyze Agent)
+
+| Sub-task | Description |
+|----------|-------------|
+| **P1-3a** | Create prompt templates with grounding rules, few-shot examples, CoT structure |
+| **P1-3b** | Add validation layer: `validate_grounded_response()` in `backend/helpers/validators.py` |
+| **P1-3c** | Update output schema to include `chain_of_thought` object |
+
+#### P1-5 Sub-tasks (Recommend Agent)
+
+| Sub-task | Description |
+|----------|-------------|
+| **P1-5a** | Recommendations must include source ad data + calculation |
+| **P1-5b** | Dollar impact estimate for each recommendation |
 
 ### Phase 2: Data Integration (00:00 - 02:00)
 
@@ -432,6 +804,7 @@ halo/
 │   ├── helpers/
 │   │   ├── __init__.py
 │   │   ├── tools.py               # Agent tools (BQ, Meta)
+│   │   ├── validators.py          # NEW: validate_grounded_response()
 │   │   └── callback_helper.py     # Callbacks
 │   ├── schemas/
 │   │   ├── __init__.py
@@ -494,28 +867,32 @@ async def get_ad_data(account_id: str, days: int = 30) -> Dict:
 get_ad_data_tool = FunctionTool(func=get_ad_data)
 ```
 
-## Good/Bad Spend Logic (from brainstorm)
+## Good/Bad Spend Logic (AI-First)
+
+**IMPORTANT:** Classification is done by the LLM, not Python functions. The thresholds below are GUIDELINES passed to the LLM prompt, not deterministic rules.
 
 ```python
-def classify_spend(ad_data, account_avg_roas):
-    roas_ratio = ad_data['roas'] / account_avg_roas
-    spend = ad_data['spend']
-    days = ad_data['days_running']
+# OLD APPROACH (WRONG - don't use):
+# def classify_spend(ad_data, account_avg_roas):
+#     if roas_ratio >= 2.0: return "GOOD"  # Rigid, no nuance
 
-    if days < 7 or spend < 1000:
-        return "WAIT"  # Learning phase
+# NEW APPROACH (RIGHT):
+# 1. Pass guidelines to LLM prompt (see ANALYZE_AGENT_PROMPT above)
+# 2. LLM reasons about the data using CoT
+# 3. Python validates that cited metrics match source data
+# 4. Allow LLM judgment for edge cases
 
-    if ad_data['roas'] == 0 and spend >= 5000:
-        return "BAD"   # Pause
+# Guidelines (not rules) for LLM:
+CLASSIFICATION_GUIDELINES = {
+    "GOOD": "ROAS >= 2× account avg, spend >= $1k, days >= 7",
+    "OK": "ROAS 1-2× account avg, qualified",
+    "WARNING": "ROAS 0.5-1× account avg, spend >= $10k",
+    "BAD": "ROAS < 0.5× OR ROAS = 0 after $5k+",
+    "WAIT": "spend < $1k OR days < 7"
+}
 
-    if roas_ratio >= 2.0:
-        return "GOOD"  # Scale 30-100%
-    elif roas_ratio >= 1.0:
-        return "OK"    # Monitor
-    elif roas_ratio >= 0.5:
-        return "WARNING"  # Review
-    else:
-        return "BAD"   # Reduce 50%
+# The LLM can deviate with reasoning, e.g.:
+# "1.95× avg but strong upward trend → classifying as GOOD"
 ```
 
 ## Verification Steps
@@ -586,7 +963,9 @@ def setup_logging():
 ```
 tests/
 ├── unit/
-│   ├── test_classify_spend.py      # Good/bad spend logic
+│   ├── test_grounding.py           # NEW: Test that responses cite accurate data
+│   ├── test_cot_reasoning.py       # NEW: Test that reasoning chain is complete
+│   ├── test_validators.py          # NEW: Test validate_grounded_response()
 │   ├── test_analyze_agent.py       # Agent callbacks
 │   └── test_recommend_logic.py     # Recommendation rules
 ├── integration/
@@ -746,47 +1125,44 @@ Our Analyze Agent should produce output matching this structure:
 }
 ```
 
-### Classification Mapping (AI-First Logic)
+### Classification Approach (AI-First)
 
-The Analyze Agent should implement these mappings:
+**OLD (Rules Engine):** Python functions `assign_grade()`, `assign_segment()`, `assign_action()` with hardcoded thresholds.
+
+**NEW (AI-First):** LLM reasons about the data and produces classifications. Python only validates that:
+1. Cited metrics match source data
+2. CoT reasoning chain is complete
+3. Output schema is correct
 
 ```python
-# Grade assignment based on Composite_Score
-def assign_grade(composite_score: float) -> str:
-    if composite_score >= 1.0:
-        return "A"
-    elif composite_score >= 0.7:
-        return "B"
-    elif composite_score >= 0.4:
-        return "C"
-    else:
-        return "D"
+# These are OUTPUT FIELDS the LLM should produce, not Python functions to run:
+OUTPUT_SCHEMA = {
+    "grade": "A|B|C|D",                          # LLM assigns based on reasoning
+    "performance_segment": "winners|high_potential|underperformers|losers",
+    "recommended_action": "scale_budget|continue_monitoring|reduce_budget|pause_and_review",
+    "chain_of_thought": {                        # Required for explainability
+        "step_1_data": {},
+        "step_2_comparison": {},
+        "step_3_qualification": {},
+        "step_4_classification": {},
+        "step_5_recommendation": {},
+        "step_6_confidence": {}
+    }
+}
 
-# Performance segment based on percentile rank
-def assign_segment(percentile_rank: float) -> tuple[str, str]:
-    if percentile_rank <= 0.05:
-        return ("winners", "top_5_percent")
-    elif percentile_rank <= 0.20:
-        return ("winners", "top_20_percent")
-    elif percentile_rank <= 0.50:
-        return ("high_potential", "above_median")
-    elif percentile_rank <= 0.80:
-        return ("underperformers", "below_median")
-    else:
-        return ("losers", "bottom_20_percent")
+# Validation function (runs AFTER LLM response):
+def validate_analyze_output(llm_response: dict, source_data: dict) -> tuple[bool, list[str]]:
+    """
+    Checks:
+    1. All required fields present
+    2. Cited metrics match source data (within tolerance)
+    3. CoT chain is complete
 
-# Recommended action based on grade + segment
-def assign_action(grade: str, segment: str, days_active: int) -> str:
-    if days_active < 7:
-        return "learning_phase"
-    if grade == "A" and segment == "winners":
-        return "scale_budget"
-    elif grade in ("A", "B"):
-        return "continue_monitoring"
-    elif grade == "C":
-        return "optimize_creative"
-    else:  # D
-        return "pause_and_review"
+    Does NOT check:
+    - Whether classification is "correct" (LLM judgment allowed)
+    """
+    # See backend/helpers/validators.py for implementation
+    pass
 ```
 
 ### Test Strategy
@@ -808,34 +1184,22 @@ def assign_action(grade: str, segment: str, days_active: int) -> str:
 
 3. **Golden tests**: Snapshot test agent output against fixture format (not exact values)
 
-### Composite Score Calculation
+### Composite Score (Optional)
 
-Reverse-engineered from production API patterns:
+For compatibility with existing OTB API output format, we MAY include composite scores. However, the primary classification should come from LLM reasoning, not formula output.
 
 ```python
-def calculate_composite_score(
-    z_roas: float,
-    z_ctr: float,
-    z_cpa: float,
-    confidence_weight: float = 1.0
-) -> float:
-    """
-    Weighted combination of z-scores.
-    Higher ROAS and CTR are good, lower CPA is good.
-    """
-    weights = {
-        "roas": 0.5,   # Revenue efficiency most important
-        "ctr": 0.3,    # Engagement signal
-        "cpa": 0.2,    # Cost efficiency (inverted)
-    }
-
-    raw_score = (
-        weights["roas"] * z_roas +
-        weights["ctr"] * z_ctr -
-        weights["cpa"] * z_cpa  # Subtract because lower CPA is better
-    )
-
+# If needed for API compatibility, this can be computed as a HELPER:
+def calculate_composite_score(z_roas, z_ctr, z_cpa, confidence_weight=1.0):
+    """Optional helper for API compatibility. NOT the primary classification method."""
+    weights = {"roas": 0.5, "ctr": 0.3, "cpa": 0.2}
+    raw_score = weights["roas"] * z_roas + weights["ctr"] * z_ctr - weights["cpa"] * z_cpa
     return round(raw_score * confidence_weight, 2)
+
+# PRIMARY APPROACH: LLM reasons about all metrics holistically
+# - Can weigh metrics differently based on context
+# - Can note conflicting signals (high ROAS but dropping CTR)
+# - Can incorporate trends, not just point-in-time values
 ```
 
 ## Risk Mitigations
@@ -848,4 +1212,32 @@ def calculate_composite_score(
 | OAuth issues | Pre-authenticate test account |
 | Cloud Run cold start | Keep backend warm with health checks |
 | Secret management | Use GCP Secret Manager |
-| Classification drift | Validate against production API fixtures |
+| LLM hallucination | Validation layer checks cited metrics match source data |
+| Unexplainable decisions | CoT reasoning chain required in all outputs |
+
+---
+
+## AI-First Verification Checklist
+
+Before demo, verify:
+
+- [ ] Analyze Agent outputs include `chain_of_thought` object with all 6 steps
+- [ ] Every metric cited in reasoning matches source data (within tolerance)
+- [ ] Recommendations include dollar impact calculations
+- [ ] `validate_grounded_response()` catches fabricated metrics (test with bad data)
+- [ ] Few-shot examples produce expected classifications
+- [ ] User-facing explanations are clear and cite specific numbers
+- [ ] Edge cases handled sensibly (borderline thresholds, zero ROAS, new ads)
+
+---
+
+## Summary: AI-First vs Rules-Based
+
+| Aspect | Rules-Based (Old) | AI-First (New) |
+|--------|-------------------|----------------|
+| Classification | Python `if/else` | LLM reasoning with guidelines |
+| Edge cases | Falls through to default | LLM uses judgment |
+| Explanations | Template strings | Natural language citing data |
+| Validation | Match fixtures exactly | Grounding check + sensible reasoning |
+| Extensibility | Change Python code | Update prompt guidelines |
+| Trust | "The algorithm said so" | "Here's the reasoning, verify yourself" |
