@@ -282,7 +282,7 @@ import os
 MODEL_CONFIG = {
     "provider": os.getenv("AI_PROVIDER", "gemini"),  # gemini | openai
     "gemini": {
-        "model": os.getenv("GEMINI_MODEL", "gemini-2.5-pro"),
+        "model": os.getenv("GEMINI_MODEL", "gemini-3.0"),
     },
     "openai": {
         "model": os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
@@ -463,7 +463,7 @@ class AnalyzeAgentModel:
     def __init__(self):
         self.agent = LlmAgent(
             name="analyze_agent",
-            model="gemini-2.5-pro",
+            model="gemini-3.0",
             description="...",
             instruction="...",
             tools=[get_ad_data_tool],
@@ -691,8 +691,8 @@ CMD ["npm", "start"]
 
 **Environment Variables (Cloud Run):**
 - `AI_PROVIDER`: gemini | openai
-- `GEMINI_MODEL`: gemini-2.5-pro
-- `GOOGLE_CLOUD_PROJECT`: GCP project ID
+- `GEMINI_MODEL`: gemini-3.0
+- `GOOGLE_CLOUD_PROJECT`: otb-dev-platform
 - `META_APP_ID`: Meta app credentials
 - `META_APP_SECRET`: Meta app secret
 - `FI_PROJECT_NAME`: Observability project name
@@ -707,106 +707,304 @@ The production OTB API responses serve as **target output format** for our Analy
 | `tl_ad_performance_prod.json` | ads | ThirdLove | Expected output format for ad analysis |
 | `wh_campaign_performance_prod.json` | campaigns | WhisperingHomes | Expected output format for campaign analysis |
 
-### Target Output Schema (from production API)
+### Approach: Anomaly Detection + RCA (SME Validated)
 
-Our Analyze Agent should produce output matching this structure:
+**Key Insight from SME:** "The goal is to find anomalies... there is no concept of leakage... it's spend RCA or CPA std deviation. The goal is to find ontology, not so much an idea of what the metrics are."
+
+Instead of fixed classification rules, Agatha uses **statistical anomaly detection** with **deep RCA** and **ontology-based exploration**.
+
+```
+Ad Data → Statistical Analysis → Anomalies Surfaced → Deep RCA → Actionable Insights
+```
+
+### Agent Tools Architecture
+
+| Tool | Purpose | When Used |
+|------|---------|-----------|
+| `detect_anomalies` | Find ads with metrics >Nσ from baseline | Initial analysis |
+| `get_ontology` | Hierarchical breakdown by dimensions | Understanding structure |
+| `run_rca` | Deep root cause analysis on anomaly | Explaining why |
+| `get_ad_data` | Fetch raw ad data from BQ/fixtures | Data retrieval |
+
+### Tool 1: Anomaly Detection
 
 ```python
-# Per-ad/campaign output
-{
-    # Identity
-    "ad_name": str,
-    "ad_id": str,
-    "ad_provider": str,  # "Google Ads", "Facebook Ads", "TikTok Ads"
+async def detect_anomalies(
+    ads: List[dict],
+    metric: str,                    # "spend" | "cpa" | "roas" | "ctr" | "cvr"
+    threshold_sigma: float = 2.0,   # Standard deviations from mean
+    direction: str = "both",        # "high" | "low" | "both"
+    min_spend: float = 100,         # Minimum spend to consider
+    config: dict = ANOMALY_CONFIG
+) -> dict:
+    """
+    Find ads where metric deviates significantly from baseline.
 
-    # Raw metrics (from BigQuery)
-    "Spend": float,
-    "ROAS": float,
-    "Purchases": int,
-    "Conversion_Value": float,
-    "CTR": float,
-    "CPA": float,
-    "days_active": int,
+    Returns:
+        {
+            "anomalies": [
+                {
+                    "ad": {...},
+                    "metric": "cpa",
+                    "value": 45.2,
+                    "baseline": 19.1,
+                    "z_score": 2.3,
+                    "direction": "high",
+                    "severity": "significant"  # "mild" | "significant" | "extreme"
+                }
+            ],
+            "baseline_stats": {
+                "mean": 19.1,
+                "std": 11.3,
+                "median": 17.5,
+                "count": 128
+            }
+        }
+    """
+```
 
-    # Computed classifications (Analyze Agent must produce these)
-    "grade": str,                    # "A", "B", "C", "D"
-    "performance_segment": str,      # "winners", "high_potential", "underperformers", "losers"
-    "performance_detail": str,       # "top_5_percent", "top_20_percent", "above_median", "below_median"
-    "recommended_action": str,       # "scale_budget", "continue_monitoring", "pause_and_review", "reduce_budget"
+### Tool 2: Ontology (Expanded Scope)
 
-    # Statistical scores (Analyze Agent computes)
-    "z_roas": float,                 # Z-score vs account average
-    "z_ctr": float,
-    "z_cpa": float,
-    "Composite_Score": float,        # Multi-factor weighted score
+```python
+async def get_ontology(
+    ads: List[dict],
+    group_by: List[str],            # Dimensions to group by
+    metrics: List[str] = None,      # Metrics to aggregate
+    config: dict = ONTOLOGY_CONFIG
+) -> dict:
+    """
+    Return hierarchical breakdown of ad data by dimensions.
 
-    # Creative status (for fatigue detection)
-    "creative_status": str,          # "multi_variant_winner", "needs_testing", "fatigued"
-    "creative_variants": int,
+    Supported dimensions (expanded scope):
+    - "ad_provider"     # Google Ads, Facebook Ads, TikTok Ads
+    - "store"           # US, IND (market)
+    - "ad_type"         # Static, Video, Shopping, Performance Max
+    - "creative_status" # multi_variant_winner, needs_testing, fatigued
+    - "spend_tier"      # High, Medium, Low
+    - "campaign_status" # ACTIVE, PAUSED, REMOVED
+    - "performance_segment"  # winners, high_potential, underperformers, losers
+
+    Returns:
+        {
+            "breakdown": {
+                "Google Ads": {
+                    "count": 45,
+                    "total_spend": 125000,
+                    "avg_roas": 2.3,
+                    "avg_cpa": 18.5,
+                    "anomaly_count": 3
+                },
+                "Facebook Ads": {...},
+                "TikTok Ads": {...}
+            },
+            "dimensions_used": ["ad_provider"],
+            "total_ads": 128
+        }
+    """
+```
+
+### Tool 3: Deep RCA (Root Cause Analysis)
+
+```python
+async def run_rca(
+    anomaly_ad: dict,
+    all_ads: List[dict],
+    anomaly_metric: str,
+    config: dict = RCA_CONFIG
+) -> dict:
+    """
+    Deep root cause analysis for an anomalous ad.
+
+    Analysis dimensions:
+    1. Placement analysis (where is spend going?)
+    2. Audience analysis (audience_engagement_score, competitive_pressure)
+    3. Creative analysis (creative_variants, unique_creatives, creative_status)
+    4. Budget analysis (budget_utilization, daily_spend_velocity, avg_daily_budget)
+    5. Comparison to similar ads (same provider, same store, same ad_type)
+
+    Returns:
+        {
+            "anomaly_summary": {
+                "ad_name": "Floor Lamps Campaign",
+                "metric": "cpa",
+                "value": 45.2,
+                "baseline": 19.1,
+                "deviation": "+137%"
+            },
+            "root_causes": [
+                {
+                    "factor": "audience_engagement",
+                    "finding": "Audience engagement score is 12.3 vs platform avg 25.5",
+                    "impact": "high",
+                    "suggestion": "Review audience targeting"
+                },
+                {
+                    "factor": "creative_fatigue",
+                    "finding": "Single creative variant running for 45 days",
+                    "impact": "medium",
+                    "suggestion": "Test new creative variants"
+                },
+                {
+                    "factor": "competitive_pressure",
+                    "finding": "Competitive pressure 0.85 (high) vs avg 0.45",
+                    "impact": "medium",
+                    "suggestion": "Consider different auction times or placements"
+                }
+            ],
+            "comparison_to_similar": {
+                "same_provider_avg_cpa": 22.1,
+                "same_store_avg_cpa": 20.5,
+                "same_ad_type_avg_cpa": 18.9
+            },
+            "recommended_actions": [
+                "Review audience targeting settings",
+                "Add 2-3 new creative variants",
+                "Consider reducing daily budget until CPA stabilizes"
+            ]
+        }
+    """
+```
+
+### Config (Anomaly Detection)
+
+```python
+# config/anomaly_config.py
+
+ANOMALY_CONFIG = {
+    "default_threshold_sigma": 2.0,
+    "severity_levels": {
+        "mild": 1.5,       # 1.5-2σ
+        "significant": 2.0, # 2-3σ
+        "extreme": 3.0,     # >3σ
+    },
+    "metrics": {
+        "spend": {"direction": "high", "min_value": 100},
+        "cpa": {"direction": "high", "min_value": 0},
+        "roas": {"direction": "low", "min_value": 0},
+        "ctr": {"direction": "both", "min_value": 0},
+        "cvr": {"direction": "both", "min_value": 0},
+    },
+    "min_sample_size": 10,  # Minimum ads for meaningful σ calculation
+}
+
+ONTOLOGY_CONFIG = {
+    "dimensions": [
+        "ad_provider",
+        "store",
+        "ad_type",
+        "creative_status",
+        "spend_tier",
+        "campaign_status",
+        "performance_segment",
+    ],
+    "default_metrics": ["Spend", "ROAS", "CPA", "CTR"],
+}
+
+RCA_CONFIG = {
+    "analysis_dimensions": [
+        "audience_engagement_score",
+        "competitive_pressure",
+        "creative_variants",
+        "unique_creatives",
+        "creative_status",
+        "budget_utilization",
+        "daily_spend_velocity",
+        "days_active",
+        "recency",
+    ],
+    "comparison_dimensions": ["ad_provider", "store", "ad_type"],
+    "impact_thresholds": {
+        "high": 0.5,    # >50% deviation from baseline
+        "medium": 0.25, # 25-50% deviation
+        "low": 0.1,     # 10-25% deviation
+    },
 }
 ```
 
-### Classification Mapping (AI-First Logic)
+### Example Agent Flow
 
-The Analyze Agent should implement these mappings:
+```
+User: "Analyze my ad account for waste"
+
+Analyze Agent:
+1. get_ad_data(account_id="tl", days=30)
+2. detect_anomalies(ads, metric="cpa", direction="high")
+   → Found 5 ads with CPA >2σ above baseline
+3. detect_anomalies(ads, metric="roas", direction="low")
+   → Found 3 ads with ROAS >2σ below baseline (1 overlap)
+4. get_ontology(ads, group_by=["ad_provider"])
+   → TikTok Ads: 4 of 7 anomalies (57%)
+5. run_rca(worst_anomaly, all_ads, "cpa")
+   → Root cause: Low audience engagement + single creative
+
+Agent Response:
+"Found 7 anomalous ads representing potential waste:
+- 4 TikTok ads with CPA 2-3x higher than baseline ($45 vs $19 avg)
+- Root cause analysis shows low audience engagement and creative fatigue
+- Recommendation: Pause 'Floor Lamps TikTok' campaign, test new creatives"
+```
+
+### Anomaly Output Schema
 
 ```python
-# Grade assignment based on Composite_Score
-def assign_grade(composite_score: float) -> str:
-    if composite_score >= 1.0:
-        return "A"
-    elif composite_score >= 0.7:
-        return "B"
-    elif composite_score >= 0.4:
-        return "C"
-    else:
-        return "D"
-
-# Performance segment based on percentile rank
-def assign_segment(percentile_rank: float) -> tuple[str, str]:
-    if percentile_rank <= 0.05:
-        return ("winners", "top_5_percent")
-    elif percentile_rank <= 0.20:
-        return ("winners", "top_20_percent")
-    elif percentile_rank <= 0.50:
-        return ("high_potential", "above_median")
-    elif percentile_rank <= 0.80:
-        return ("underperformers", "below_median")
-    else:
-        return ("losers", "bottom_20_percent")
-
-# Recommended action based on grade + segment
-def assign_action(grade: str, segment: str, days_active: int) -> str:
-    if days_active < 7:
-        return "learning_phase"
-    if grade == "A" and segment == "winners":
-        return "scale_budget"
-    elif grade in ("A", "B"):
-        return "continue_monitoring"
-    elif grade == "C":
-        return "optimize_creative"
-    else:  # D
-        return "pause_and_review"
-```
+# What the Analyze Agent surfaces (not fixed classifications)
+{
+    "anomalies": [
+        {
+            "ad_id": "12345",
+            "ad_name": "Floor Lamps TikTok",
+            "anomaly_type": "high_cpa",
+            "severity": "significant",
+            "metrics": {
+                "cpa": {"value": 45.2, "baseline": 19.1, "z_score": 2.3},
+                "roas": {"value": 0.3, "baseline": 2.1, "z_score": -1.8},
+            },
+            "rca_summary": "Low audience engagement + creative fatigue",
+            "suggested_actions": ["Pause campaign", "Test new creatives"],
+            "potential_waste": 8500  # Estimated $ waste if continued
+        }
+    ],
+    "ontology_insights": {
+        "worst_provider": "TikTok Ads",
+        "worst_dimension_breakdown": {...}
+    },
+    "summary": {
+        "total_anomalies": 7,
+        "total_potential_waste": 28500,
+        "top_recommendation": "Review TikTok ad targeting"
+    }
+}
 
 ### Test Strategy
 
-1. **Unit tests**: Validate classification functions against fixture data
+1. **Unit tests**: Validate anomaly detection against fixture data
    ```python
-   def test_grade_assignment():
-       # From tl_ad_performance_prod.json, ad "Thirdlove® Bras"
-       assert assign_grade(1.29) == "A"
+   def test_detect_cpa_anomalies():
+       # From tl_ad_performance_prod.json
+       ads = load_fixture("tl_ad_performance_prod.json")
+       result = detect_anomalies(ads, metric="cpa", threshold_sigma=2.0)
+       # Should find ads with z_cpa > 2.0
+       assert len(result["anomalies"]) > 0
+       for anomaly in result["anomalies"]:
+           assert abs(anomaly["z_score"]) >= 2.0
 
-   def test_segment_assignment():
-       # From fixture, percentile_rank=0 (top performer)
-       segment, detail = assign_segment(0.0)
-       assert segment == "winners"
-       assert detail == "top_5_percent"
+   def test_ontology_by_provider():
+       ads = load_fixture("tl_ad_performance_prod.json")
+       result = get_ontology(ads, group_by=["ad_provider"])
+       assert "Google Ads" in result["breakdown"]
+       assert "total_spend" in result["breakdown"]["Google Ads"]
+
+   def test_rca_identifies_factors():
+       ads = load_fixture("tl_ad_performance_prod.json")
+       anomaly = detect_anomalies(ads, metric="cpa", direction="high")["anomalies"][0]
+       rca = run_rca(anomaly["ad"], ads, "cpa")
+       assert "root_causes" in rca
+       assert len(rca["recommended_actions"]) > 0
    ```
 
-2. **Integration tests**: Run Analyze Agent on BigQuery data, compare output structure to fixtures
+2. **Integration tests**: Run Analyze Agent on fixture data, verify anomalies match production z-scores
 
-3. **Golden tests**: Snapshot test agent output against fixture format (not exact values)
+3. **Golden tests**: Validate that high z_cpa ads are surfaced as anomalies
 
 ### Composite Score Calculation
 
