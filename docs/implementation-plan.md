@@ -14,10 +14,80 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 
 ## Open Questions (Remaining)
 
-| # | Question | Owner | Suggested Default |
-|---|----------|-------|-------------------|
-| 6 | Meta OAuth scopes needed? | Hemanth | `ads_read`, `ads_management` |
+| # | Question | Owner | Status |
+|---|----------|-------|--------|
+| 6 | Meta OAuth scopes needed? | Hemanth | RESOLVED - see Meta API section |
+| 7 | Meta Ad creatives access? | Hemanth | RESOLVED - see Meta API section |
 | 8 | Demo scenario/script? | Jaidev | TL account showing $88k TikTok waste |
+
+## BigQuery Data Access (RESOLVED)
+
+### Views
+| Tenant | View |
+|--------|------|
+| ThirdLove (TL) | `otb-dev-platform.master.northstar_master_combined_tl` |
+| WhisperingHomes (WH) | `otb-dev-platform.master.northstar_master_combined_wh` |
+
+### Data Source Filtering (Critical)
+Each metric type requires filtering by authoritative source to avoid double-counting:
+
+| Metric Type | Filter | Columns |
+|-------------|--------|---------|
+| **Advertising** | `WHERE data_source = 'Ad Providers'` | spend, ad_click, CPA, CPC, CPM, CTR, ROAS |
+| **Revenue** | `WHERE data_source = 'Shopify'` | gross_sales, net_sales, total_sales, order_id |
+| **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
+
+### Sample Ad Performance Query
+```sql
+SELECT
+    ad_name,
+    ad_provider,
+    SUM(spend) as total_spend,
+    SUM(ROAS) as total_roas,
+    SUM(ad_click) as clicks,
+    AVG(CPC) as avg_cpc,
+    AVG(CTR) as avg_ctr
+FROM `otb-dev-platform.master.northstar_master_combined_tl`
+WHERE data_source = 'Ad Providers'
+  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY ad_name, ad_provider
+ORDER BY total_spend DESC
+```
+
+## Meta API Integration (RESOLVED)
+
+### Facebook Login (Custom OAuth)
+```python
+# routes/auth_routes.py
+@router.get("/facebook")
+async def facebook_login(redirectTo: str = "/"):
+    oauth_url = (
+        f"https://www.facebook.com/v19.0/dialog/oauth?"
+        f"client_id={META_APP_ID}"
+        f"&redirect_uri={META_REDIRECT_URI}"
+        f"&scope=ads_read,ads_management,business_management"
+        f"&state={redirectTo}"
+    )
+    return RedirectResponse(url=oauth_url)
+
+@router.get("/facebook/callback")
+async def facebook_callback(code: str, state: str = "/"):
+    # Exchange code for token, then redirect with token
+```
+
+### Meta Ad Creative Preview (Two-Step Pattern)
+```
+Step 1: GET /meta-ads/ads/{adId}
+→ Returns: ad_id, ad_name, creative_id, image_url, status
+
+Step 2: GET /meta-ads/creative/{creativeId}/preview
+→ Returns: has_video, has_preview, preview_html
+```
+
+### Required Scopes
+- `ads_read` - Read ad account data
+- `ads_management` - For Execute Agent
+- `business_management` - Access business accounts
 
 ## Architecture (from requirements)
 
