@@ -2,7 +2,7 @@
   "id": "HALO-65",
   "title": "Add LLM Reasoning Enrichment to Recommend Agent",
   "type": "task",
-  "status": "open",
+  "status": "in_progress",
   "priority": 1,
   "description": "Implement hybrid LLM approach for RecommendAgent - keep rule-based decisions, add LLM-generated reasoning.\n\n## Plan\nSee: ~/.claude/plans/shimmying-pondering-riddle.md\n\n## Key Components\n1. `backend/helpers/llm_client.py` - Gemini API client\n2. `backend/helpers/reasoning_enricher.py` - LLM enrichment with hallucination prevention\n3. Modify `recommend_agent.py` - Add async method with LLM integration\n\n## Hallucination Prevention (4 Layers)\n1. Prompt constraints (only use provided data)\n2. Pydantic validation (banned phrases)\n3. Number fact-checking (verify against grounding)\n4. Action immutability (LLM cannot change decisions)\n\n## Fallback Logging\nAll fallback scenarios logged with reason:\n- API error\n- Timeout\n- Hallucination detected\n- Validation failure",
   "labels": ["agent", "llm", "enhancement"],

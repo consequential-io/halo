@@ -3,9 +3,14 @@ Recommend Agent - Budget and Creative Recommendations for Ad Spend.
 
 This agent takes analysis results (anomalies) and generates actionable recommendations
 for scaling winners, cutting losers, and refreshing creatives.
+
+Supports optional LLM-enhanced reasoning while keeping rule-based decisions.
 """
 
 from typing import Any
+
+from config.settings import settings
+from helpers.reasoning_enricher import ReasoningEnricher
 
 
 RECOMMEND_AGENT_PROMPT = """
@@ -55,8 +60,13 @@ class RecommendAgentModel:
     Takes analysis results (anomalies + RCA) and produces actionable recommendations.
     """
 
-    def __init__(self):
+    def __init__(self, enable_llm_reasoning: bool | None = None):
         self.name = "recommend_agent"
+        # Use settings default if not specified
+        if enable_llm_reasoning is None:
+            enable_llm_reasoning = settings.enable_llm_reasoning
+        self.enable_llm_reasoning = enable_llm_reasoning
+        self.reasoning_enricher = ReasoningEnricher(enable_llm=enable_llm_reasoning)
         # Recommendation thresholds
         self.thresholds = {
             "scale": {
@@ -157,6 +167,35 @@ class RecommendAgentModel:
                 "total_ads_reviewed": len(all_ads) if all_ads else 0,
             },
         }
+
+    async def generate_recommendations_async(
+        self,
+        analysis_results: dict[str, Any],
+        all_ads: list[dict] | None = None
+    ) -> dict[str, Any]:
+        """
+        Generate recommendations with optional LLM-enhanced reasoning.
+
+        This async version enriches the reasoning field using an LLM while
+        keeping all rule-based decisions unchanged.
+
+        Args:
+            analysis_results: Output from AnalyzeAgentModel.run_analysis()
+            all_ads: Optional full ads list for finding scaling opportunities
+
+        Returns:
+            Recommendations with enriched reasoning (or template fallback)
+        """
+        # Get base recommendations using rule-based logic
+        result = self.generate_recommendations(analysis_results, all_ads)
+
+        # Enrich reasoning with LLM if enabled
+        if self.enable_llm_reasoning and result.get("recommendations"):
+            result["recommendations"] = await self.reasoning_enricher.enrich_batch(
+                result["recommendations"]
+            )
+
+        return result
 
     def _recommend_for_high_cpa(
         self,

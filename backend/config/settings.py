@@ -19,6 +19,11 @@ class Settings:
     data_source: str = "fixture"  # fixture | bq
     data_lookback_days: int = 30  # Days of data to fetch from BQ
 
+    # LLM Reasoning Configuration
+    enable_llm_reasoning: bool = True
+    llm_timeout_seconds: float = 30.0
+    gemini_api_key: str = ""
+
     # TODO: Add timezone and currency settings in future iteration
     # timezone: str = "America/Los_Angeles"
     # currency_field: str = "1"  # Default to no conversion
@@ -34,6 +39,9 @@ class Settings:
             bq_dataset=os.getenv("BQ_DATASET", "master"),
             data_source=os.getenv("DATA_SOURCE", "fixture"),
             data_lookback_days=int(os.getenv("DATA_LOOKBACK_DAYS", "30")),
+            enable_llm_reasoning=os.getenv("ENABLE_LLM_REASONING", "true").lower() == "true",
+            llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
+            gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
         )
 
 
