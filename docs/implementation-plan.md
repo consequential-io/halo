@@ -3,6 +3,8 @@
 ## Overview
 Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 
+**Approach:** AI-First Implementation (validate AI value before infrastructure)
+
 ## Decisions Made
 
 | # | Question | Decision |
@@ -11,6 +13,11 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 | Data source | Meta API (demo) + BigQuery (dev/test/fallback) | BQ has both Meta & Google data |
 | AI Model | Config-driven | Switch between Gemini/OpenAI via env var |
 | Execute actions | Mock write for hackathon | Real API stretch goal |
+| BigQuery views | TL + WH views identified | See BigQuery Data Access section |
+| Meta OAuth | Custom OAuth with httpx | See Meta API Integration section |
+| Meta creatives | Two-step fetch pattern | See Meta API Integration section |
+| OTB Prod API | Test fixtures only | Use response data to validate our classification logic |
+| AI-first validation | Match production output schema | Analyze Agent should produce same fields as OTB API |
 
 ## Open Questions (Remaining)
 
@@ -20,79 +27,136 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 | 7 | Meta Ad creatives access? | Hemanth | RESOLVED - see Meta API section |
 | 8 | Demo scenario/script? | Jaidev | TL account showing $88k TikTok waste |
 
-## BigQuery Data Access (RESOLVED)
-
-### Views
-| Tenant | View |
-|--------|------|
-| ThirdLove (TL) | `otb-dev-platform.master.northstar_master_combined_tl` |
-| WhisperingHomes (WH) | `otb-dev-platform.master.northstar_master_combined_wh` |
-
-### Data Source Filtering (Critical)
-Each metric type requires filtering by authoritative source to avoid double-counting:
-
-| Metric Type | Filter | Columns |
-|-------------|--------|---------|
-| **Advertising** | `WHERE data_source = 'Ad Providers'` | spend, ad_click, CPA, CPC, CPM, CTR, ROAS |
-| **Revenue** | `WHERE data_source IN ('Shopify', 'Zoho')` | gross_sales, net_sales, total_sales, order_id |
-| **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
-
-**Tenant-specific revenue sources:**
-- TL (ThirdLove): `Shopify`
-- WH (WhisperingHomes): `Zoho`
-
-**Note:** All columns are STRING type - use SAFE_CAST for numeric operations.
-
-### Sample Ad Performance Query (Validated)
-```sql
-SELECT
-    ad_name,
-    ad_provider,
-    SUM(SAFE_CAST(spend AS FLOAT64)) as total_spend,
-    AVG(SAFE_CAST(ROAS AS FLOAT64)) as avg_roas,
-    SUM(SAFE_CAST(ad_click AS INT64)) as clicks
-FROM `otb-dev-platform.master.northstar_master_combined_tl`
-WHERE data_source = 'Ad Providers'
-  AND SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', datetime_UTC)
-      >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
-GROUP BY ad_name, ad_provider
-ORDER BY total_spend DESC
-```
-
 ## Meta API Integration (RESOLVED)
 
-### Facebook Login (Custom OAuth)
+### Facebook Login Pattern
+From: `/Users/jaidevk/Work/dev/insights-dashboard/src/screens/LoginScreen.jsx`
+
+**Frontend (simple redirect):**
+```javascript
+const handleFacebookLogin = () => {
+  const facebookLoginUrl = buildUrl("auth/facebook", { redirectTo: returnUrl });
+  window.open(facebookLoginUrl, "_self");
+};
+```
+
+**Backend route needed:** `/auth/facebook` (Express/FastAPI OAuth handler)
+- Redirects to Facebook OAuth
+- Handles callback with token exchange
+- Stores access token in session
+
+### Meta Ad Creative Preview
+From: `/Users/jaidevk/Work/dev/insights-dashboard/src/components/analytics/component-library/composites/AdPreview/`
+
+**Two-step fetch pattern:**
+
+```
+Step 1: GET /meta-ads/ads/{adId}
+Response: {
+  "data": {
+    "ad_id": "...",
+    "ad_name": "...",
+    "creative_id": "...",    // Needed for Step 2
+    "image_url": "...",      // Thumbnail URL
+    "status": "ACTIVE"
+  }
+}
+
+Step 2: GET /meta-ads/creative/{creativeId}/preview
+Response: {
+  "data": {
+    "has_video": true/false,
+    "has_preview": true/false,
+    "preview_html": "<iframe>...</iframe>"  // Embeddable preview
+  }
+}
+```
+
+**Backend endpoints needed:**
+1. `GET /meta-ads/ads/{ad_id}` - Fetch ad details from Meta Marketing API
+2. `GET /meta-ads/creative/{creative_id}/preview` - Fetch creative preview HTML
+
+### Required Meta API Scopes
+Based on the patterns, these scopes are needed:
+- `ads_read` - Read ad account data
+- `ads_management` - For Execute Agent (if doing real writes)
+- `business_management` - Access business accounts
+
+### Meta Marketing API Endpoints (Backend Implementation)
+```python
+# Ad details
+GET https://graph.facebook.com/v19.0/{ad_id}
+  ?fields=id,name,creative{id,image_url,thumbnail_url,video_id},status
+  &access_token={token}
+
+# Creative preview
+GET https://graph.facebook.com/v19.0/{creative_id}/previews
+  ?ad_format=DESKTOP_FEED_STANDARD
+  &access_token={token}
+```
+
+### Custom OAuth Flow (FastAPI)
 ```python
 # routes/auth_routes.py
+from fastapi import APIRouter, Request
+from fastapi.responses import RedirectResponse
+import httpx
+
+router = APIRouter()
+
+META_APP_ID = settings.meta_app_id
+META_APP_SECRET = settings.meta_app_secret
+META_REDIRECT_URI = settings.meta_redirect_uri
+
 @router.get("/facebook")
 async def facebook_login(redirectTo: str = "/"):
+    """Redirect to Facebook OAuth consent screen"""
     oauth_url = (
         f"https://www.facebook.com/v19.0/dialog/oauth?"
         f"client_id={META_APP_ID}"
         f"&redirect_uri={META_REDIRECT_URI}"
         f"&scope=ads_read,ads_management,business_management"
-        f"&state={redirectTo}"
+        f"&state={redirectTo}"  # Pass return URL in state
     )
     return RedirectResponse(url=oauth_url)
 
 @router.get("/facebook/callback")
 async def facebook_callback(code: str, state: str = "/"):
-    # Exchange code for token, then redirect with token
-```
+    """Handle OAuth callback, exchange code for token"""
+    async with httpx.AsyncClient() as client:
+        # Exchange code for access token
+        token_response = await client.get(
+            "https://graph.facebook.com/v19.0/oauth/access_token",
+            params={
+                "client_id": META_APP_ID,
+                "client_secret": META_APP_SECRET,
+                "redirect_uri": META_REDIRECT_URI,
+                "code": code
+            }
+        )
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
 
-### Meta Ad Creative Preview (Two-Step Pattern)
-```
-Step 1: GET /meta-ads/ads/{adId}
-→ Returns: ad_id, ad_name, creative_id, image_url, status
+        # Get long-lived token (optional but recommended)
+        long_token_response = await client.get(
+            "https://graph.facebook.com/v19.0/oauth/access_token",
+            params={
+                "grant_type": "fb_exchange_token",
+                "client_id": META_APP_ID,
+                "client_secret": META_APP_SECRET,
+                "fb_exchange_token": access_token
+            }
+        )
+        long_token_data = long_token_response.json()
 
-Step 2: GET /meta-ads/creative/{creativeId}/preview
-→ Returns: has_video, has_preview, preview_html
-```
+        # Store token in session/memory (for hackathon)
+        # In production: encrypt and store in database
 
-### Required Scopes
-- `ads_read` - Read ad account data
-- `ads_management` - For Execute Agent
-- `business_management` - Access business accounts
+        # Redirect to frontend with token
+        return RedirectResponse(
+            url=f"{state}?token={long_token_data.get('access_token', access_token)}"
+        )
+```
 
 ## Architecture (from requirements)
 
@@ -132,6 +196,83 @@ ANALYZE         RECOMMEND        EXECUTE
 └─────────────────────────────────────────┘
 ```
 
+## BigQuery Data Access (RESOLVED)
+
+### Views
+| Tenant | View |
+|--------|------|
+| ThirdLove (TL) | `otb-dev-platform.master.northstar_master_combined_tl` |
+| WhisperingHomes (WH) | `otb-dev-platform.master.northstar_master_combined_wh` |
+
+### Data Source Filtering (Critical)
+Each metric type requires filtering by authoritative source to avoid double-counting:
+
+| Metric Type | Filter | Columns |
+|-------------|--------|---------|
+| **Advertising** | `WHERE data_source = 'Ad Providers'` | spend, ad_click, CPA, CPC, CPM, CTR, ROAS |
+| **Revenue** | `WHERE data_source = 'Shopify'` | gross_sales, net_sales, total_sales, order_id |
+| **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
+
+### Sample Queries
+
+**Ad Performance Query (Single Source):**
+```sql
+SELECT
+    ad_name,
+    ad_provider,
+    SUM(spend) as total_spend,
+    SUM(ROAS) as total_roas,
+    SUM(ad_click) as clicks,
+    AVG(CPC) as avg_cpc,
+    AVG(CTR) as avg_ctr
+FROM `otb-dev-platform.master.northstar_master_combined_tl`
+WHERE data_source = 'Ad Providers'
+  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY ad_name, ad_provider
+ORDER BY total_spend DESC
+```
+
+**ROAS Calculation (Mixed Sources - Use CTEs):**
+```sql
+WITH revenue AS (
+  SELECT
+    DATE(TIMESTAMP(datetime_UTC, 'America/Los_Angeles')) as date,
+    SUM(total_sales) as revenue
+  FROM `otb-dev-platform.master.northstar_master_combined_tl`
+  WHERE data_source = 'Shopify'
+  GROUP BY date
+),
+ad_spend AS (
+  SELECT
+    DATE(TIMESTAMP(datetime_UTC, 'America/Los_Angeles')) as date,
+    SUM(spend) as spend
+  FROM `otb-dev-platform.master.northstar_master_combined_tl`
+  WHERE data_source = 'Ad Providers'
+  GROUP BY date
+)
+SELECT
+  r.date,
+  r.revenue,
+  a.spend,
+  SAFE_DIVIDE(r.revenue, a.spend) as calculated_roas
+FROM revenue r
+JOIN ad_spend a ON r.date = a.date
+ORDER BY r.date DESC
+```
+
+### Available Columns (Ad Providers)
+- `spend` - Total ad spend
+- `ROAS` - Return on ad spend (pre-calculated)
+- `ad_click` - Number of clicks
+- `CPA` - Cost per acquisition
+- `CPC` - Cost per click
+- `CPM` - Cost per mille (1000 impressions)
+- `CTR` - Click-through rate
+- `ad_name` - Ad creative name
+- `ad_provider` - Platform (Google Ads, Facebook Ads, TikTok Ads)
+- `store` - Market (US, IND)
+- `datetime_UTC` - Timestamp
+
 ## Model Configuration
 
 ```python
@@ -149,121 +290,121 @@ MODEL_CONFIG = {
 }
 ```
 
-## Implementation Tasks (Beads Issues)
+## AI-First Implementation Timeline
 
-### Epic: HALO-E0 - Project Scaffolding (Create Extensible Structure)
+**Start:** Jan 31, 17:30 IST | **Demo:** Feb 1, 09:00 IST | **Available:** 15.5 hours
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-0.1** | Create backend directory structure | All `__init__.py` files, empty modules | None |
-| **HALO-0.2** | Create `pyproject.toml` with dependencies | google-adk, fastapi, uvicorn, httpx, pydantic | Which google-adk version? Check otb-agents |
-| **HALO-0.3** | Create `.env.example` with all env vars | Template for local dev | Need full list of secrets |
-| **HALO-0.4** | Create frontend with Next.js scaffold | `npx create-next-app@latest` | Use App Router or Pages? (App Router recommended) |
-| **HALO-0.5** | Create stub files for all modules | Empty classes/functions with docstrings | None |
-| **HALO-0.6** | Setup pytest and test directory structure | `conftest.py`, sample test | None |
-| **HALO-0.7** | Create Dockerfiles (backend + frontend) | Working docker build | Base image versions? |
-| **HALO-0.8** | Create `cloudbuild.yaml` | Deploy config | Which GCP project? Region? |
+### Milestones & Gates
 
-### Epic: HALO-E1 - Backend Foundation
+| Milestone | Target | Hours | Gate |
+|-----------|--------|-------|------|
+| Minimal setup + mock tool | Jan 31, 18:30 | 1h | - |
+| **Analyze Agent + fixtures** | Jan 31, 21:00 | 2.5h | - |
+| **GATE 1** | Jan 31, 21:30 | 0.5h | Grades match fixtures? |
+| **Recommend Agent** | Jan 31, 23:30 | 2h | - |
+| **GATE 2** | Feb 1, 00:00 | 0.5h | Recommendations sensible? |
+| BigQuery tool + live data | Feb 1, 01:30 | 1.5h | - |
+| **GATE 3** | Feb 1, 02:00 | 0.5h | Live data quality OK? |
+| Execute Agent (mock) | Feb 1, 03:30 | 1.5h | - |
+| FastAPI routes | Feb 1, 05:00 | 1.5h | - |
+| Frontend basic UI | Feb 1, 06:30 | 1.5h | - |
+| Integration & Testing | Feb 1, 07:30 | 1h | - |
+| Demo ready | Feb 1, 08:30 | 1h | Buffer |
+| **DEMO** | Feb 1, 09:00 | - | - |
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-1** | Implement `config/settings.py` | Pydantic Settings with env vars | Full list of config keys needed? |
-| **HALO-2** | Implement `config/session_manager.py` | Singleton SessionManager class | Same pattern as otb-agents? |
-| **HALO-3** | Implement `config/logging_config.py` | JSON formatter, setup function | Log level configurable via env? |
-| **HALO-4** | Implement `controllers/base_controller.py` | `run_agent_flow()` method | Copy from otb-agents or adapt? |
-| **HALO-5** | Implement `main.py` | FastAPI app with health endpoint | CORS settings for frontend? |
+### Gate Definitions
 
-**Open Questions for E1:**
-- [ ] Do we need authentication middleware for API routes?
-- [ ] Should we add rate limiting?
-- [ ] Error response schema - match otb-agents or custom?
+| Gate | Question | Pass | Fail Action |
+|------|----------|------|-------------|
+| **Gate 1** | Does Analyze Agent produce correct grades vs fixtures? | Grades/segments match production API | Fix classification logic before proceeding |
+| **Gate 2** | Are recommendations actionable and sensible? | Human review approves | Simplify recommendation logic |
+| **Gate 3** | Does live BigQuery data produce same quality? | Comparable output | Use fixtures for demo (fallback) |
 
-### Epic: HALO-E2 - Data Tools
+### Critical Path
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-6** | Implement BigQuery connector tool | `get_ad_data_from_bq()` function | Which BQ dataset/table? Need credentials path |
-| **HALO-7** | Implement Meta API read tool | `get_ad_data_from_meta()` function | OAuth token storage? Refresh flow? |
-| **HALO-8** | Implement data source router | Auto-select Meta vs BQ based on availability | Fallback logic - timeout or error-based? |
-| **HALO-9** | Create test fixtures from BQ data | JSON files with sample ad data | Which accounts to export? TL + WH? |
+```
+NOW (17:30)
+    │
+    ▼ [1h] Minimal setup
+18:30
+    │
+    ▼ [2.5h] Analyze Agent (fixtures)
+21:00
+    │
+    ▼ [0.5h] GATE 1 ← First AI validation
+21:30
+    │
+    ▼ [2h] Recommend Agent
+23:30
+    │
+    ▼ [0.5h] GATE 2 ← Second AI validation
+00:00 (Feb 1)
+    │
+    ▼ [1.5h] BigQuery integration
+01:30
+    │
+    ▼ [0.5h] GATE 3 ← Live data or fallback
+02:00
+    │
+    ▼ [5.5h] Execute + Routes + Frontend
+07:30
+    │
+    ▼ [1h] Integration
+08:30
+    │
+    ▼ [0.5h] Buffer
+09:00 DEMO
+```
 
-**Open Questions for E2:**
-- [ ] BigQuery: Which project/dataset/table contains the ad data?
-- [ ] BigQuery: Service account key or ADC for auth?
-- [ ] Meta API: App ID and App Secret - where stored?
-- [ ] Meta API: Which API version? (v18.0, v19.0?)
-- [ ] Data schema: Need to map BQ fields to Meta API fields?
+## Implementation Tasks (AI-First Order)
 
-### Epic: HALO-E3 - Agents
+### Phase 1: AI Validation (17:30 - 00:00)
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-10** | Implement Analyze Agent | `AnalyzeAgentModel` class with prompt | Prompt template - where to store? |
-| **HALO-11** | Implement `classify_spend()` logic | Pure function with thresholds | Thresholds configurable via env? |
-| **HALO-12** | Implement Recommend Agent | `RecommendAgentModel` class with prompt | How detailed should recommendations be? |
-| **HALO-13** | Implement creative fatigue detection | Function to flag fatigued creatives | CTR decline threshold - 30% correct? |
-| **HALO-14** | Implement Execute Agent | `ExecuteAgentModel` with mock write | Mock response format? |
-| **HALO-15** | Implement Agatha Orchestrator | `AgathaController` coordinating all agents | Sequential or can agents run in parallel? |
+| Task | Description | Deliverable |
+|------|-------------|-------------|
+| **P1-1** | Minimal pyproject.toml + settings | Just enough to run agents |
+| **P1-2** | Mock data tool (returns fixture JSON) | `get_ad_data()` tool |
+| **P1-3** | Analyze Agent with classification logic | Grades, segments, scores |
+| **P1-4** | GATE 1: Validate vs fixtures | Compare output to production API |
+| **P1-5** | Recommend Agent | Budget + creative recommendations |
+| **P1-6** | GATE 2: Human review | Are recommendations actionable? |
 
-**Open Questions for E3:**
-- [ ] Prompt storage: Inline in code, or external files/service (like fi.prompt)?
-- [ ] Agent instructions: How detailed? Include examples in prompt?
-- [ ] Output format: JSON schema for each agent's response?
-- [ ] Error handling: What if one agent fails mid-flow?
-- [ ] Session state: What data passes between agents?
+### Phase 2: Data Integration (00:00 - 02:00)
 
-### Epic: HALO-E4 - API Routes
+| Task | Description | Deliverable |
+|------|-------------|-------------|
+| **P2-1** | BigQuery data tool | Real data connector |
+| **P2-2** | Re-run agents with live data | Validate quality |
+| **P2-3** | GATE 3: Quality check | Same output quality? |
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-16** | Implement `/auth/meta/login` | Redirect to Meta OAuth | Callback URL for hackathon? |
-| **HALO-17** | Implement `/auth/meta/callback` | Handle OAuth callback, store token | Token storage - session? DB? Memory? |
-| **HALO-18** | Implement `/api/analyze` | Trigger analysis, return results | Sync or async? Polling for results? |
-| **HALO-19** | Implement `/api/recommendations` | Get recommendations for account | Pagination needed? |
-| **HALO-20** | Implement `/api/execute` | Execute approved recommendations | Request body schema? |
-| **HALO-21** | Implement `/api/accounts` | List connected ad accounts | Cache account list? |
+### Phase 3: API & Execute (02:00 - 05:00)
 
-**Open Questions for E4:**
-- [ ] Auth: Protect routes with OAuth token validation?
-- [ ] CORS: Allow frontend origin only?
-- [ ] Response schema: Pydantic models for all responses?
-- [ ] Async execution: Long-running analysis - websocket or polling?
+| Task | Description | Deliverable |
+|------|-------------|-------------|
+| **P3-1** | Execute Agent (mock writes) | Confirmation messages |
+| **P3-2** | FastAPI app + routes | `/analyze`, `/recommend`, `/execute` |
+| **P3-3** | Session/state management | Request context |
 
-### Epic: HALO-E5 - Frontend (Minimal)
+### Phase 4: Frontend & Demo (05:00 - 08:30)
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-22** | Setup shadcn/ui components | Install and configure | Which components needed? |
-| **HALO-23** | Implement Login page | Meta OAuth button, redirect | Branding/logo for demo? |
-| **HALO-24** | Implement Dashboard layout | Header, sidebar, main content area | Show account selector in header? |
-| **HALO-25** | Implement Analysis view | Display analysis results | Visualization - charts or tables? |
-| **HALO-26** | Implement Recommendations list | Cards with approve/reject buttons | Bulk approve option? |
-| **HALO-27** | Implement Execution confirmation | Success/failure messages | Animation/celebration on success? |
-| **HALO-28** | Implement API client | Fetch wrapper with auth headers | Use SWR or React Query? |
+| Task | Description | Deliverable |
+|------|-------------|-------------|
+| **P4-1** | Minimal React frontend | Login, recommendations, execute |
+| **P4-2** | Integration testing | E2E flow works |
+| **P4-3** | Demo script + fallback | Prepared for anything |
 
-**Open Questions for E5:**
-- [ ] Styling: Tailwind default or custom theme?
-- [ ] State management: React Context sufficient or need Zustand?
-- [ ] Loading states: Skeleton loaders or spinners?
-- [ ] Error handling: Toast notifications or inline errors?
+## Legacy Task Mapping (Beads Issues)
 
-### Epic: HALO-E6 - Integration & Demo
+For reference, original beads issues map to new phases:
 
-| Task | Description | Deliverable | Open Questions |
-|------|-------------|-------------|----------------|
-| **HALO-29** | Write unit tests for classify_spend | pytest tests with edge cases | Coverage target? |
-| **HALO-30** | Write integration tests for agent flow | AsyncMock-based tests | Which scenarios to test? |
-| **HALO-31** | Create demo script | Step-by-step demo walkthrough | Demo duration target? |
-| **HALO-32** | Record fallback demo video | Screen recording if live fails | Loom or local recording? |
-| **HALO-33** | Write README.md | Project overview, setup instructions | Include architecture diagram? |
-| **HALO-34** | Create pitch deck (6 slides) | Problem, Insight, Demo, Tech, Value, Next | Use existing template? |
-| **HALO-35** | Write AI Impact Statement | 200 words on AI usage | Guardrails section - what to include? |
-
-**Open Questions for E6:**
-- [ ] Demo account: Use real TL/WH data or synthetic?
-- [ ] Demo scenario: Show $88k TikTok waste discovery?
-- [ ] Fallback: Pre-recorded or BigQuery-backed live?
+| Original | New Phase | Status |
+|----------|-----------|--------|
+| HALO-E0 (Scaffolding) | P1-1, P1-2 | Minimal only |
+| HALO-E1 (Foundation) | P2-1, P3-2, P3-3 | Deferred |
+| HALO-E2 (Agents) | P1-3, P1-5, P3-1 | AI-first priority |
+| HALO-E3 (Routes) | P3-2 | After agents validated |
+| HALO-E4 (Frontend) | P4-1 | Last |
+| HALO-E5 (Integration) | P4-2, P4-3 | Final |
 
 ## File Structure
 
@@ -385,30 +526,29 @@ def classify_spend(ad_data, account_avg_roas):
 4. **Frontend**: Login → Dashboard → Recommendations → Execute flow
 5. **Demo dry-run**: Full E2E with stopwatch (target < 60s)
 
-## Dependencies Between Tasks
+## Dependencies Between Tasks (AI-First)
 
 ```
-HALO-E0 (Scaffolding: 0.1-0.8)
+P1-1 (minimal setup)
     │
-    ├── HALO-E1 (Foundation: 1-5)
-    │       │
-    │       └── HALO-E2 (Data Tools: 6-9)
-    │               │
-    │               └── HALO-E3 (Agents: 10-15)
-    │                       │
-    │                       └── HALO-E4 (Routes: 16-21)
-    │
-    └── HALO-E5 (Frontend: 22-28) ──── depends on E4 routes
-            │
-            └── HALO-E6 (Integration: 29-35)
+    └── P1-2 (mock data tool)
+           │
+           └── P1-3 (Analyze Agent) ──► GATE 1
+                  │
+                  └── P1-5 (Recommend Agent) ──► GATE 2
+                         │
+                         ├── P2-1 (BigQuery tool) ──► GATE 3
+                         │
+                         └── P3-1 (Execute Agent)
+                                │
+                                └── P3-2 (FastAPI routes)
+                                       │
+                                       └── P4-1 (Frontend)
+                                              │
+                                              └── P4-2 (Integration)
 ```
 
-**Parallel Work Opportunities:**
-- E0 (Scaffolding) → can split between team members
-- E1 + E5 initial setup → can run in parallel
-- E2 (BQ tool) + E2 (Meta tool) → can run in parallel
-- E3 (Agents) → sequential (Analyze → Recommend → Execute)
-- E6 (Tests + Demo prep) → can start once E3 is done
+**Key insight:** Agents are validated with mock data BEFORE building data connectors or infrastructure. Gates ensure we don't build infra for broken AI.
 
 ## Foundational Elements
 
@@ -557,6 +697,147 @@ CMD ["npm", "start"]
 - `META_APP_SECRET`: Meta app secret
 - `FI_PROJECT_NAME`: Observability project name
 
+## Test Fixtures (AI-First Validation)
+
+The production OTB API responses serve as **target output format** for our Analyze Agent. Our classification logic should produce similar structures.
+
+### Fixture Files
+| File | Entity | Tenant | Use |
+|------|--------|--------|-----|
+| `tl_ad_performance_prod.json` | ads | ThirdLove | Expected output format for ad analysis |
+| `wh_campaign_performance_prod.json` | campaigns | WhisperingHomes | Expected output format for campaign analysis |
+
+### Target Output Schema (from production API)
+
+Our Analyze Agent should produce output matching this structure:
+
+```python
+# Per-ad/campaign output
+{
+    # Identity
+    "ad_name": str,
+    "ad_id": str,
+    "ad_provider": str,  # "Google Ads", "Facebook Ads", "TikTok Ads"
+
+    # Raw metrics (from BigQuery)
+    "Spend": float,
+    "ROAS": float,
+    "Purchases": int,
+    "Conversion_Value": float,
+    "CTR": float,
+    "CPA": float,
+    "days_active": int,
+
+    # Computed classifications (Analyze Agent must produce these)
+    "grade": str,                    # "A", "B", "C", "D"
+    "performance_segment": str,      # "winners", "high_potential", "underperformers", "losers"
+    "performance_detail": str,       # "top_5_percent", "top_20_percent", "above_median", "below_median"
+    "recommended_action": str,       # "scale_budget", "continue_monitoring", "pause_and_review", "reduce_budget"
+
+    # Statistical scores (Analyze Agent computes)
+    "z_roas": float,                 # Z-score vs account average
+    "z_ctr": float,
+    "z_cpa": float,
+    "Composite_Score": float,        # Multi-factor weighted score
+
+    # Creative status (for fatigue detection)
+    "creative_status": str,          # "multi_variant_winner", "needs_testing", "fatigued"
+    "creative_variants": int,
+}
+```
+
+### Classification Mapping (AI-First Logic)
+
+The Analyze Agent should implement these mappings:
+
+```python
+# Grade assignment based on Composite_Score
+def assign_grade(composite_score: float) -> str:
+    if composite_score >= 1.0:
+        return "A"
+    elif composite_score >= 0.7:
+        return "B"
+    elif composite_score >= 0.4:
+        return "C"
+    else:
+        return "D"
+
+# Performance segment based on percentile rank
+def assign_segment(percentile_rank: float) -> tuple[str, str]:
+    if percentile_rank <= 0.05:
+        return ("winners", "top_5_percent")
+    elif percentile_rank <= 0.20:
+        return ("winners", "top_20_percent")
+    elif percentile_rank <= 0.50:
+        return ("high_potential", "above_median")
+    elif percentile_rank <= 0.80:
+        return ("underperformers", "below_median")
+    else:
+        return ("losers", "bottom_20_percent")
+
+# Recommended action based on grade + segment
+def assign_action(grade: str, segment: str, days_active: int) -> str:
+    if days_active < 7:
+        return "learning_phase"
+    if grade == "A" and segment == "winners":
+        return "scale_budget"
+    elif grade in ("A", "B"):
+        return "continue_monitoring"
+    elif grade == "C":
+        return "optimize_creative"
+    else:  # D
+        return "pause_and_review"
+```
+
+### Test Strategy
+
+1. **Unit tests**: Validate classification functions against fixture data
+   ```python
+   def test_grade_assignment():
+       # From tl_ad_performance_prod.json, ad "Thirdlove® Bras"
+       assert assign_grade(1.29) == "A"
+
+   def test_segment_assignment():
+       # From fixture, percentile_rank=0 (top performer)
+       segment, detail = assign_segment(0.0)
+       assert segment == "winners"
+       assert detail == "top_5_percent"
+   ```
+
+2. **Integration tests**: Run Analyze Agent on BigQuery data, compare output structure to fixtures
+
+3. **Golden tests**: Snapshot test agent output against fixture format (not exact values)
+
+### Composite Score Calculation
+
+Reverse-engineered from production API patterns:
+
+```python
+def calculate_composite_score(
+    z_roas: float,
+    z_ctr: float,
+    z_cpa: float,
+    confidence_weight: float = 1.0
+) -> float:
+    """
+    Weighted combination of z-scores.
+    Higher ROAS and CTR are good, lower CPA is good.
+    """
+    weights = {
+        "roas": 0.5,   # Revenue efficiency most important
+        "ctr": 0.3,    # Engagement signal
+        "cpa": 0.2,    # Cost efficiency (inverted)
+    }
+
+    raw_score = (
+        weights["roas"] * z_roas +
+        weights["ctr"] * z_ctr -
+        weights["cpa"] * z_cpa  # Subtract because lower CPA is better
+    )
+
+    return round(raw_score * confidence_weight, 2)
+```
+
 ## Risk Mitigations
 
 | Risk | Mitigation |
@@ -567,3 +848,4 @@ CMD ["npm", "start"]
 | OAuth issues | Pre-authenticate test account |
 | Cloud Run cold start | Keep backend warm with health checks |
 | Secret management | Use GCP Secret Manager |
+| Classification drift | Validate against production API fixtures |
