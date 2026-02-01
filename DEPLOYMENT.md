@@ -48,32 +48,21 @@ gcloud run deploy halo-frontend \
   --set-env-vars "VITE_API_URL=$BACKEND_URL"
 ```
 
-**Frontend URL:** https://halo-frontend-zqlsaqunba-uc.a.run.app
+**Frontend URL:** https://adspend.consequential.io
 
 ---
 
 ## Step 3: Configure Custom Domain
 
-### 3.1 Add Domain Mapping (via Console)
+### 3.1 Domain Mapping (Completed)
 
-```bash
-open "https://console.cloud.google.com/run/domains?project=otb-dev-platform"
-```
+Custom domain `adspend.consequential.io` is mapped to the frontend service.
 
-1. Click **"Add Mapping"**
-2. Select service: `halo-frontend`
-3. Enter domain: `adspend.consequential.io`
-4. Copy the DNS records shown
+### 3.2 DNS Configuration (Completed)
 
-### 3.2 Update DNS
-
-Add to your DNS provider (for consequential.io):
-
-| Type | Name | Value |
-|------|------|-------|
-| CNAME | adspend | ghs.googlehosted.com |
-
-*Wait 15-30 mins for DNS propagation and SSL certificate provisioning*
+| Type | Name | Value | Status |
+|------|------|-------|--------|
+| CNAME | adspend | ghs.googlehosted.com | ✅ Active |
 
 ---
 

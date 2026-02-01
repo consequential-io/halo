@@ -1,5 +1,11 @@
 # Agatha - Ad Spend Optimization Agent
 
+> **Live Demo:** [https://adspend.consequential.io](https://adspend.consequential.io)
+>
+> **Hackathon:** AIBoomi 2025 | **Category:** Commerce / Shopping
+
+---
+
 ## Problem Statement
 
 Ecommerce brands waste 20-30% of ad spend because they lack visibility into which campaigns generate positive ROI. By the time insights are gathered manually, the opportunity window has passed. The industry loses **$198B annually** to inefficient ad spend, with 56% of digital ads never seen by humans and critical errors taking 48+ hours to detect.
@@ -185,17 +191,45 @@ Recommendations include confidence based on data quality:
 - Audience discovery/targeting strategy
 - AI-generated creative assets (flagging only)
 
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| **AI/ML** | Google Gemini 2.5 Pro, Google ADK (Agent Development Kit) |
+| **Backend** | Python 3.11, FastAPI, Pydantic |
+| **Frontend** | React 18, Vite, TypeScript, TailwindCSS |
+| **Data** | Google BigQuery, Meta Marketing API |
+| **Infrastructure** | Google Cloud Run, Docker |
+| **Auth** | Meta OAuth 2.0 |
+
+## Demo
+
+**Live Application:** [https://adspend.consequential.io](https://adspend.consequential.io)
+
+### Demo Flow
+1. Login with Facebook or use Demo Mode
+2. Select date range for analysis
+3. Click "Analyze" to detect anomalies
+4. Review AI-generated recommendations
+5. Select and execute approved changes (dry-run mode)
+
 ## Team
 
-| Role | Name | GitHub | Contact |
-|------|------|--------|---------|
-| Product Manager | Jaidev | [@jaidevk](https://github.com/jaidevk) | - |
-| Engineering Lead | Hemanth | [@hemanthj](https://github.com/hemanthj) | - |
+| Role | Name | GitHub |
+|------|------|--------|
+| Product Manager | Jaidev | [@jaidevk](https://github.com/jaidevk) |
+| Engineering Lead | Hemanth | [@hemanthj](https://github.com/hemanthj) |
 
-**Hackathon:** AIBoomi, Pune
+**Organization:** [Consequential.io](https://consequential.io)
+**Hackathon:** AIBoomi, Pune (Feb 2025)
 **Category:** Commerce / Shopping / Consumer
-**Demo Deadline:** Feb 1, 2025, 09:00 IST
+
+## Additional Resources
+
+- [Pitch Deck](docs/PITCH_DECK.md)
+- [AI Impact Statement](docs/AI_IMPACT_STATEMENT.md)
+- [Deployment Guide](DEPLOYMENT.md)
 
 ---
 
-Built with Google ADK, FastAPI, Next.js, and Gemini 2.5 Pro.
+Built with Google ADK, FastAPI, React, and Gemini 2.5 Pro.
