@@ -2,12 +2,25 @@
   "id": "HALO-45",
   "title": "Write integration tests for agent flow",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 2,
   "description": "AsyncMock-based tests for E2E agent execution.\n\n## Pattern (from otb-agents)\n```python\nimport pytest\nfrom unittest.mock import AsyncMock, patch\nfrom controllers.agatha_controller import AgathaController\n\n@pytest.mark.asyncio\nasync def test_full_agent_flow():\n    controller = AgathaController()\n    \n    with patch.object(controller, 'run_agent_flow') as mock_flow:\n        mock_flow.return_value = {\n            'recommendations': [\n                {'action': 'pause', 'campaign': 'TikTok', 'impact': 88000}\n            ]\n        }\n        \n        result = await controller.run_full_flow('test_account')\n        \n        assert len(result['recommendations']) == 1\n        assert result['recommendations'][0]['impact'] == 88000\n\n@pytest.mark.asyncio\nasync def test_analyze_to_recommend_flow():\n    # Test data flows correctly between agents\n    pass\n```",
-  "labels": ["testing", "integration"],
+  "labels": [
+    "testing",
+    "integration"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
   "parent": "HALO-7",
-  "blockedBy": ["HALO-30"]
+  "blockedBy": [
+    "HALO-30"
+  ],
+  "closedAt": "2026-02-01T05:05:56.248071",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.248073",
+      "text": "Closed by recovery sync: Integration tests exist - test_recommend_agent.py, etc."
+    }
+  ]
 }

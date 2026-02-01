@@ -1,0 +1,15 @@
+{
+  "id": "HALO-73",
+  "title": "Add subtle grid background pattern",
+  "description": "Add CSS grid pattern: repeating linear gradient, lines rgba(255,255,255,0.03), spacing ~50px. Very subtle.",
+  "status": "closed",
+  "priority": 3,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.021015",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.888767"
+}

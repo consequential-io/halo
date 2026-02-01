@@ -2,12 +2,27 @@
   "id": "HALO-21",
   "title": "Implement BigQuery connector tool",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
   "description": "Implement get_ad_data_from_bq() function as FunctionTool.\n\n## AI-First Note\nThis is Phase 2 (P2-1) - only needed AFTER Gate 2 passes. Mock data is sufficient for AI validation.\n\n## RESOLVED: BigQuery Details (from implementation plan)\n\n### Views\n| Tenant | View |\n|--------|------|\n| ThirdLove (TL) | `otb-dev-platform.master.northstar_master_combined_tl` |\n| WhisperingHomes (WH) | `otb-dev-platform.master.northstar_master_combined_wh` |\n\n### Critical: Data Source Filtering\n```sql\n-- Ad metrics: MUST filter to avoid double-counting\nWHERE data_source = 'Ad Providers'\n```\n\n### Implementation\n```python\nfrom google.cloud import bigquery\nfrom google.adk.tools import FunctionTool\nfrom typing import Dict\n\nVIEWS = {\n    \"tl\": \"otb-dev-platform.master.northstar_master_combined_tl\",\n    \"wh\": \"otb-dev-platform.master.northstar_master_combined_wh\",\n}\n\nasync def get_ad_data_from_bq(\n    account_id: str,  # 'tl' or 'wh'\n    days: int = 30\n) -> Dict:\n    client = bigquery.Client()\n    view = VIEWS.get(account_id.lower())\n    \n    query = f\"\"\"\n    SELECT\n        ad_name,\n        ad_provider,\n        SUM(spend) as total_spend,\n        AVG(ROAS) as avg_roas,\n        SUM(ad_click) as total_clicks,\n        AVG(CPC) as avg_cpc,\n        AVG(CTR) as avg_ctr,\n        store\n    FROM `{view}`\n    WHERE data_source = 'Ad Providers'\n      AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)\n    GROUP BY ad_name, ad_provider, store\n    ORDER BY total_spend DESC\n    \"\"\"\n    \n    job = client.query(query)\n    results = job.result()\n    return {\"ads\": [dict(row) for row in results]}\n\nget_ad_data_bq_tool = FunctionTool(func=get_ad_data_from_bq)\n```\n\n### Available Columns (Ad Providers)\n- spend, ROAS, ad_click, CPA, CPC, CPM, CTR\n- ad_name, ad_provider (Google Ads, Facebook Ads, TikTok Ads)\n- store (US, IND), datetime_UTC",
-  "labels": ["data", "bigquery", "tool", "phase-2"],
+  "labels": [
+    "data",
+    "bigquery",
+    "tool",
+    "phase-2"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T12:00:00Z",
   "parent": "HALO-3",
-  "blockedBy": ["HALO-52"]
+  "blockedBy": [
+    "HALO-52"
+  ],
+  "closedAt": "2026-02-01T05:05:56.247507",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.247509",
+      "text": "Closed by recovery sync: BigQuery connector implemented in tools.py (HALO-64 confirms)"
+    }
+  ]
 }

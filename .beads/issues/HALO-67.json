@@ -1,0 +1,15 @@
+{
+  "id": "HALO-67",
+  "title": "Add Consequential logo to app",
+  "description": "Add logo SVG (green brackets + white text) to LoginPage and header navbar on authenticated pages.",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020254",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.886114"
+}

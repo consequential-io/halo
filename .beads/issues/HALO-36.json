@@ -5,9 +5,12 @@
   "status": "open",
   "priority": 2,
   "description": "List connected ad accounts.\n\n## Implementation\n```python\n@router.get(\"/accounts\")\nasync def list_accounts(access_token: str):\n    async with httpx.AsyncClient() as client:\n        response = await client.get(\n            f\"https://graph.facebook.com/v19.0/me/adaccounts\",\n            params={\n                \"access_token\": access_token,\n                \"fields\": \"id,name,account_status,currency,timezone_name\"\n            }\n        )\n        return response.json()\n```\n\n## For Demo\n- Pre-load TL and WH accounts\n- Show dropdown in UI to switch between accounts",
-  "labels": ["api", "accounts"],
+  "labels": [
+    "api",
+    "accounts"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
   "parent": "HALO-5",
-  "blockedBy": ["HALO-32"]
+  "blockedBy": []
 }

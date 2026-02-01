@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def get_ad_data(
     account_id: str = "tl",
     days: int | None = None,
-    source: str = "fixture"
+    source: str | None = None
 ) -> dict[str, Any]:
     """
     Fetch ad performance data from fixtures or BigQuery.
@@ -39,9 +39,11 @@ def get_ad_data(
     Returns:
         Dict with "ads" list and "metadata"
     """
-    # Use settings default if not specified
+    # Use settings defaults if not specified
     if days is None:
         days = settings.data_lookback_days
+    if source is None:
+        source = settings.data_source
 
     if source == "fixture":
         return _get_ad_data_from_fixture(account_id)

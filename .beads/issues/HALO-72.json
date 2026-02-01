@@ -1,0 +1,15 @@
+{
+  "id": "HALO-72",
+  "title": "Add Outfit font family",
+  "description": "Add Google Font Outfit. Update CSS font-family. Weights: headings 600-700, body 400, buttons 500.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020938",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.888190"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "HALO-66",
+  "title": "Update color scheme to Consequential dark theme",
+  "description": "Update app colors: Background #0A0A0A, Cards #1A1A1A, Accent #9AE65C (lime green), Text #FFFFFF/#A1A1A1, Border rgba(255,255,255,0.1). Replace blue/purple gradient with solid dark.",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.019749",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.885791"
+}

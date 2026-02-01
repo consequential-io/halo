@@ -1,0 +1,15 @@
+{
+  "id": "HALO-69",
+  "title": "Add Powered by AI Agents badge",
+  "description": "Add pill badge above login title. Text: '\u26a1 Powered by AI Agents', bg rgba(154,230,92,0.1), text #9AE65C, border rgba(154,230,92,0.3), radius 20px.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020645",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.886967"
+}

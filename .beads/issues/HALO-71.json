@@ -1,0 +1,15 @@
+{
+  "id": "HALO-71",
+  "title": "Update Dashboard and Analysis pages to dark theme",
+  "description": "Apply dark theme: page bg #0A0A0A, cards #1A1A1A. AnalyzePage: dark toggles with green active state, outlined date buttons with green selected, green Run Analysis button.",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020850",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.887821"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "HALO-74",
+  "title": "Implement left sidebar navigation with Analyze/Recommend/Execute tabs",
+  "description": "Implemented new navigation structure:\n- Left sidebar with tenant name and logged-in user\n- 3 nav sections: Analyze, Recommend, Execute\n- Welcome to Consequential.io message\n- Date range picker calendar control\n- Removed TL/WH references\n- Deselect all on Recommend page by default\n- Progressive nav enabling based on workflow",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:52:41.281252",
+  "closedAt": "2026-02-01T06:52:41.281260",
+  "labels": [
+    "ux",
+    "frontend",
+    "navigation"
+  ]
+}

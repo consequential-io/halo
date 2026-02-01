@@ -2,12 +2,27 @@
   "id": "HALO-41",
   "title": "Implement Recommendations list",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 0,
   "description": "Cards with approve/reject buttons - the 'Aha Moment'.\n\n## UI (Key Demo Component)\n```tsx\n{recommendations.map(rec => (\n  <Card key={rec.id}>\n    <CardHeader>\n      <Badge variant={rec.action === 'scale' ? 'success' : 'destructive'}>\n        {rec.action.toUpperCase()}\n      </Badge>\n      <CardTitle>{rec.campaign_name}</CardTitle>\n    </CardHeader>\n    <CardContent>\n      <p>{rec.reasoning}</p>\n      <p className=\"text-2xl font-bold\">\n        Impact: ${rec.impact.toLocaleString()}\n      </p>\n    </CardContent>\n    <CardFooter className=\"gap-2\">\n      <Button onClick={() => approve(rec.id)}>Approve</Button>\n      <Button variant=\"outline\" onClick={() => reject(rec.id)}>\n        Reject\n      </Button>\n    </CardFooter>\n  </Card>\n))}\n```\n\n## Features\n- Visual distinction between scale/pause/refresh actions\n- Clear $ impact on each card\n- Simple approve/reject workflow",
-  "labels": ["frontend", "ui", "recommendations", "demo"],
+  "labels": [
+    "frontend",
+    "ui",
+    "recommendations",
+    "demo"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
   "parent": "HALO-6",
-  "blockedBy": ["HALO-40"]
+  "blockedBy": [
+    "HALO-40"
+  ],
+  "closedAt": "2026-02-01T05:05:56.244801",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.244803",
+      "text": "Closed by recovery sync: RecommendationsPage.tsx implemented with approve/reject"
+    }
+  ]
 }

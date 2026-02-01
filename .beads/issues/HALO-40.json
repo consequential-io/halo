@@ -2,12 +2,26 @@
   "id": "HALO-40",
   "title": "Implement Analysis view",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
   "description": "Display analysis results.\n\n## UI Components\n- Summary card with total $ impact headline\n- Classification breakdown (GOOD/BAD/OK counts)\n- List of analyzed campaigns with status badges\n\n## Example\n```tsx\n<Card>\n  <CardHeader>\n    <CardTitle>Analysis Complete</CardTitle>\n    <CardDescription>\n      Agatha found $152k in optimization opportunities\n    </CardDescription>\n  </CardHeader>\n  <CardContent>\n    <div className=\"flex gap-4\">\n      <Badge variant=\"success\">3 to Scale</Badge>\n      <Badge variant=\"destructive\">2 to Pause</Badge>\n      <Badge variant=\"secondary\">5 to Monitor</Badge>\n    </div>\n  </CardContent>\n</Card>\n```",
-  "labels": ["frontend", "ui", "analysis"],
+  "labels": [
+    "frontend",
+    "ui",
+    "analysis"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
   "parent": "HALO-6",
-  "blockedBy": ["HALO-39"]
+  "blockedBy": [
+    "HALO-39"
+  ],
+  "closedAt": "2026-02-01T05:05:56.244522",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.244524",
+      "text": "Closed by recovery sync: AnalyzePage.tsx implemented with date range selector"
+    }
+  ]
 }

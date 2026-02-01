@@ -1,0 +1,15 @@
+{
+  "id": "HALO-68",
+  "title": "Restyle login buttons to Consequential design",
+  "description": "Facebook button: outlined style, transparent bg, border #4267B2. Demo button: filled #9AE65C, black text, 8px radius.",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020395",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.886484"
+}

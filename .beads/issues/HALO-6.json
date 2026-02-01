@@ -2,11 +2,25 @@
   "id": "HALO-6",
   "title": "Epic: Frontend",
   "type": "epic",
-  "status": "open",
+  "status": "closed",
   "priority": 0,
   "description": "Minimal frontend for hackathon demo.\n\n## Pages\n- Login page with Meta OAuth button\n- Dashboard with account selector\n- Recommendations view with approve/reject\n- Execution confirmation view\n\n## Stack\n- Next.js + TypeScript\n- shadcn/ui components\n- Tailwind CSS",
-  "labels": ["epic", "frontend", "ui"],
+  "labels": [
+    "epic",
+    "frontend",
+    "ui"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
-  "blockedBy": ["HALO-5"]
+  "blockedBy": [
+    "HALO-5"
+  ],
+  "closedAt": "2026-02-01T05:05:56.252046",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.252051",
+      "text": "Closed by recovery sync: Epic complete - Frontend deployed to Cloud Run"
+    }
+  ]
 }

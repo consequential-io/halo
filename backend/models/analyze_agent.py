@@ -61,7 +61,7 @@ class AnalyzeAgentModel:
             "run_rca": run_rca,
         }
 
-    def run_analysis(self, account_id: str = "tl", days: int = 30) -> dict[str, Any]:
+    def run_analysis(self, account_id: str = "tl", days: int = 30, source: str | None = None) -> dict[str, Any]:
         """
         Run full anomaly detection analysis on an account.
 
@@ -71,12 +71,13 @@ class AnalyzeAgentModel:
         Args:
             account_id: Account to analyze ("tl" or "wh")
             days: Days of data to analyze
+            source: Data source ("fixture" or "bq"), defaults to settings.data_source
 
         Returns:
             Analysis results with anomalies, ontology insights, and recommendations
         """
         # Step 1: Get ad data
-        data = get_ad_data(account_id=account_id, days=days)
+        data = get_ad_data(account_id=account_id, days=days, source=source)
         if "error" in data:
             return {"error": data["error"]}
 

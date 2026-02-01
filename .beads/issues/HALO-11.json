@@ -2,11 +2,22 @@
   "id": "HALO-11",
   "title": "Create frontend with Next.js scaffold",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 1,
-  "description": "Initialize Next.js frontend with TypeScript.\n\n## Command\n```bash\nnpx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir\n```\n\n## Structure\n```\nfrontend/\n├── package.json\n├── src/\n│   ├── app/\n│   │   ├── page.tsx           # Login\n│   │   ├── dashboard/\n│   │   │   └── page.tsx\n│   │   └── recommendations/\n│   │       └── page.tsx\n│   └── components/\n└── .env.local.example\n```\n\n## Decision\n- Use App Router (recommended)",
-  "labels": ["scaffolding", "frontend"],
+  "description": "Initialize Next.js frontend with TypeScript.\n\n## Command\n```bash\nnpx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir\n```\n\n## Structure\n```\nfrontend/\n\u251c\u2500\u2500 package.json\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 app/\n\u2502   \u2502   \u251c\u2500\u2500 page.tsx           # Login\n\u2502   \u2502   \u251c\u2500\u2500 dashboard/\n\u2502   \u2502   \u2502   \u2514\u2500\u2500 page.tsx\n\u2502   \u2502   \u2514\u2500\u2500 recommendations/\n\u2502   \u2502       \u2514\u2500\u2500 page.tsx\n\u2502   \u2514\u2500\u2500 components/\n\u2514\u2500\u2500 .env.local.example\n```\n\n## Decision\n- Use App Router (recommended)",
+  "labels": [
+    "scaffolding",
+    "frontend"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
-  "parent": "HALO-1"
+  "parent": "HALO-1",
+  "closedAt": "2026-02-01T05:06:36.995293",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:06:36.995300",
+      "text": "SUPERSEDED: Used Vite + React instead of Next.js"
+    }
+  ]
 }

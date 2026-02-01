@@ -1,84 +1,75 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { analyze, AnalyzeResponse } from '../api/client'
+import { useAuth } from '../hooks/useAuth'
+import Layout from '../components/Layout'
+import DateRangePicker from '../components/DateRangePicker'
 
 const styles = {
-  container: {
-    minHeight: '100vh',
-    background: '#f5f5f5',
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '32px',
   },
-  header: {
-    background: 'white',
-    padding: '16px 32px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  welcome: {
+    fontSize: '28px',
+    fontWeight: 600,
+    color: '#FFFFFF',
+    marginBottom: '8px',
+  },
+  subtitle: {
+    color: '#A1A1A1',
+    fontSize: '15px',
+  },
+  card: {
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '12px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
+  formRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logo: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#667eea',
-    cursor: 'pointer',
-  },
-  main: {
-    maxWidth: '800px',
-    margin: '40px auto',
-    padding: '0 20px',
-  },
-  title: {
-    fontSize: '28px',
-    marginBottom: '8px',
-    color: '#1a1a2e',
-  },
-  subtitle: {
-    color: '#666',
-    marginBottom: '32px',
-  },
-  card: {
-    background: 'white',
-    borderRadius: '12px',
-    padding: '32px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    marginBottom: '24px',
-  },
-  formGroup: {
-    marginBottom: '20px',
-  },
   label: {
-    display: 'block',
     fontSize: '14px',
-    fontWeight: 600,
+    fontWeight: 500,
+    color: '#FFFFFF',
     marginBottom: '8px',
-    color: '#333',
   },
-  select: {
-    width: '100%',
-    padding: '12px',
-    fontSize: '16px',
-    borderRadius: '8px',
-    border: '1px solid #ddd',
+  sourceToggle: {
+    display: 'flex',
+    gap: '8px',
   },
-  dateRangeGroup: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  dateRangeBtn: {
-    padding: '12px 16px',
+  sourceBtn: {
+    padding: '10px 20px',
     fontSize: '14px',
+    fontWeight: 500,
     borderRadius: '8px',
-    border: '2px solid #ddd',
-    background: 'white',
+    border: '1px solid rgba(255,255,255,0.2)',
+    background: 'transparent',
+    color: '#A1A1A1',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
   },
-  dateRangeBtnActive: {
-    borderColor: '#667eea',
-    background: '#f0f4ff',
-    color: '#667eea',
+  sourceBtnActive: {
+    borderColor: '#9AE65C',
+    background: '#9AE65C',
+    color: '#0A0A0A',
+  },
+  analyzeBtn: {
+    background: '#9AE65C',
+    color: '#0A0A0A',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 32px',
+    fontSize: '15px',
     fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
   loading: {
     textAlign: 'center' as const,
@@ -87,103 +78,129 @@ const styles = {
   spinner: {
     width: '48px',
     height: '48px',
-    border: '4px solid #f3f3f3',
-    borderTop: '4px solid #667eea',
+    border: '3px solid #333',
+    borderTop: '3px solid #9AE65C',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     margin: '0 auto 16px',
   },
+  loadingText: {
+    color: '#A1A1A1',
+    fontSize: '15px',
+  },
+  resultsCard: {
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '12px',
+    padding: '32px',
+  },
   statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '20px',
+    gap: '16px',
     marginBottom: '24px',
   },
   stat: {
     textAlign: 'center' as const,
-    padding: '16px',
-    background: '#f9f9f9',
-    borderRadius: '8px',
+    padding: '24px',
+    background: '#0A0A0A',
+    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   statValue: {
-    fontSize: '32px',
+    fontSize: '48px',
     fontWeight: 700,
-    color: '#667eea',
+    color: '#9AE65C',
+    lineHeight: 1,
+    marginBottom: '8px',
   },
   statLabel: {
     fontSize: '14px',
-    color: '#666',
-    marginTop: '4px',
+    color: '#A1A1A1',
   },
-  button: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
+  getRecsBtn: {
+    background: '#9AE65C',
+    color: '#0A0A0A',
     border: 'none',
     borderRadius: '8px',
-    padding: '14px 32px',
+    padding: '16px',
     fontSize: '16px',
     fontWeight: 600,
     cursor: 'pointer',
     width: '100%',
+    transition: 'all 0.2s ease',
   },
-  buttonDisabled: {
-    background: '#ccc',
-    cursor: 'not-allowed',
+  successMessage: {
+    textAlign: 'center' as const,
+    padding: '20px',
+    color: '#9AE65C',
+    marginBottom: '16px',
+  },
+  secondaryBtn: {
+    background: 'transparent',
+    color: '#A1A1A1',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '8px',
+    padding: '14px',
+    fontSize: '15px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    width: '100%',
   },
   error: {
-    background: '#fee',
-    color: '#c00',
+    background: 'rgba(255, 107, 107, 0.1)',
+    border: '1px solid rgba(255, 107, 107, 0.3)',
+    color: '#FF6B6B',
     padding: '16px',
     borderRadius: '8px',
     marginBottom: '16px',
-  },
-  sourceToggle: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '24px',
-  },
-  sourceBtn: {
-    flex: 1,
-    padding: '10px 16px',
-    fontSize: '14px',
-    borderRadius: '8px',
-    border: '2px solid #ddd',
-    background: 'white',
-    cursor: 'pointer',
-  },
-  sourceBtnActive: {
-    borderColor: '#667eea',
-    background: '#667eea',
-    color: 'white',
+    textAlign: 'center' as const,
   },
 }
 
-const DATE_RANGES = [
-  { label: 'Last 7 Days', days: 7 },
-  { label: 'Last 14 Days', days: 14 },
-  { label: 'Last 30 Days', days: 30 },
-  { label: 'Last 60 Days', days: 60 },
-  { label: 'Last 90 Days', days: 90 },
-]
-
 export default function AnalyzePage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const tenant = searchParams.get('tenant') || 'TL'
+  const { tenantName } = useAuth()
 
-  const [days, setDays] = useState(30)
+  // Date range state - default to last 14 days
+  const [endDate, setEndDate] = useState(() => new Date())
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 13)
+    return d
+  })
+
   const [source, setSource] = useState<'bq' | 'fixture'>('bq')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzeResponse | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // Load any existing session
+  useEffect(() => {
+    const savedSession = localStorage.getItem('agatha_session')
+    if (savedSession) {
+      setSessionId(savedSession)
+    }
+  }, [])
+
+  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+  const handleDateChange = (start: Date, end: Date) => {
+    setStartDate(start)
+    setEndDate(end)
+  }
 
   const runAnalysis = async () => {
     try {
       setLoading(true)
       setError(null)
       setResult(null)
-      const data = await analyze({ tenant, days, source })
+      // Use TL as default tenant ID for the API
+      const data = await analyze({ tenant: 'TL', days, source })
       setResult(data)
+      setSessionId(data.session_id)
+      localStorage.setItem('agatha_session', data.session_id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed')
     } finally {
@@ -198,25 +215,34 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div style={styles.container}>
+    <Layout
+      tenantName={tenantName}
+      sessionId={sessionId}
+      hasAnalysis={!!result && result.anomalies_found > 0}
+    >
       <style>
         {`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}
       </style>
 
-      <header style={styles.header}>
-        <div style={styles.logo} onClick={() => navigate('/dashboard')}>
-          Ad Spend Agent
+      {/* Header Row */}
+      <div style={styles.headerRow}>
+        <div>
+          <h1 style={styles.welcome}>Welcome to Consequential.io</h1>
+          <p style={styles.subtitle}>Identify opportunities to improve your Ad Performance</p>
         </div>
-      </header>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onChange={handleDateChange}
+        />
+      </div>
 
-      <main style={styles.main}>
-        <h1 style={styles.title}>Analysis: {tenant}</h1>
-        <p style={styles.subtitle}>Configure and run anomaly detection on ad spend data</p>
-
-        {!result && !loading && (
-          <div style={styles.card}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Data Source</label>
+      {/* Analysis Form */}
+      {!result && !loading && (
+        <div style={styles.card}>
+          <div style={styles.formRow}>
+            <div>
+              <div style={styles.label}>Data Source</div>
               <div style={styles.sourceToggle}>
                 <button
                   style={{
@@ -225,7 +251,7 @@ export default function AnalyzePage() {
                   }}
                   onClick={() => setSource('bq')}
                 >
-                  BigQuery (Live)
+                  Live Data
                 </button>
                 <button
                   style={{
@@ -238,90 +264,89 @@ export default function AnalyzePage() {
                 </button>
               </div>
             </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Date Range</label>
-              <div style={styles.dateRangeGroup}>
-                {DATE_RANGES.map((range) => (
-                  <button
-                    key={range.days}
-                    style={{
-                      ...styles.dateRangeBtn,
-                      ...(days === range.days ? styles.dateRangeBtnActive : {}),
-                    }}
-                    onClick={() => setDays(range.days)}
-                  >
-                    {range.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button style={styles.button} onClick={runAnalysis}>
-              Run Analysis
+            <button
+              style={styles.analyzeBtn}
+              onClick={runAnalysis}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#8BD84E' }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#9AE65C' }}
+            >
+              Analyze
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {loading && (
-          <div style={styles.card}>
-            <div style={styles.loading}>
-              <div style={styles.spinner}></div>
-              <p>Analyzing {days} days of ad spend data from {source === 'bq' ? 'BigQuery' : 'sample data'}...</p>
+      {/* Loading State */}
+      {loading && (
+        <div style={styles.card}>
+          <div style={styles.loading}>
+            <div style={styles.spinner}></div>
+            <p style={styles.loadingText}>
+              Analyzing {days} days of Acquisition metrics...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div style={styles.card}>
+          <div style={styles.error}>{error}</div>
+          <button
+            style={styles.secondaryBtn}
+            onClick={() => { setError(null); setResult(null); }}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Results */}
+      {result && !loading && (
+        <div style={styles.resultsCard}>
+          <div style={styles.statsGrid}>
+            <div style={styles.stat}>
+              <div style={styles.statValue}>{result.total_ads}</div>
+              <div style={styles.statLabel}>Total Ads</div>
+            </div>
+            <div style={styles.stat}>
+              <div style={{ ...styles.statValue, color: result.anomalies_found > 0 ? '#FF6B6B' : '#9AE65C' }}>
+                {result.anomalies_found}
+              </div>
+              <div style={styles.statLabel}>Anomalies Found</div>
+            </div>
+            <div style={styles.stat}>
+              <div style={styles.statValue}>{days}</div>
+              <div style={styles.statLabel}>Days Analyzed</div>
             </div>
           </div>
-        )}
 
-        {error && (
-          <div style={styles.card}>
-            <div style={styles.error}>{error}</div>
-            <button style={styles.button} onClick={() => { setError(null); setResult(null); }}>
-              Try Again
+          {result.anomalies_found > 0 && (
+            <button
+              style={styles.getRecsBtn}
+              onClick={handleGetRecommendations}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#8BD84E' }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#9AE65C' }}
+            >
+              Get Recommendations
             </button>
-          </div>
-        )}
+          )}
 
-        {result && !loading && (
-          <div style={styles.card}>
-            <div style={styles.statsGrid}>
-              <div style={styles.stat}>
-                <div style={styles.statValue}>{result.total_ads}</div>
-                <div style={styles.statLabel}>Total Ads</div>
+          {result.anomalies_found === 0 && (
+            <>
+              <div style={styles.successMessage}>
+                No anomalies detected. Your ads are performing well.
               </div>
-              <div style={styles.stat}>
-                <div style={{ ...styles.statValue, color: result.anomalies_found > 0 ? '#e74c3c' : '#27ae60' }}>
-                  {result.anomalies_found}
-                </div>
-                <div style={styles.statLabel}>Anomalies Found</div>
-              </div>
-              <div style={styles.stat}>
-                <div style={styles.statValue}>{days}</div>
-                <div style={styles.statLabel}>Days Analyzed</div>
-              </div>
-            </div>
-
-            {result.anomalies_found > 0 && (
-              <button style={styles.button} onClick={handleGetRecommendations}>
-                Get Recommendations
+              <button
+                style={styles.secondaryBtn}
+                onClick={() => setResult(null)}
+              >
+                Run New Analysis
               </button>
-            )}
-
-            {result.anomalies_found === 0 && (
-              <>
-                <div style={{ textAlign: 'center', padding: '20px', color: '#27ae60', marginBottom: '16px' }}>
-                  No anomalies detected. Your ads are performing well.
-                </div>
-                <button
-                  style={{ ...styles.button, background: '#6c757d' }}
-                  onClick={() => setResult(null)}
-                >
-                  Run New Analysis
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+            </>
+          )}
+        </div>
+      )}
+    </Layout>
   )
 }

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
 import AnalyzePage from './pages/AnalyzePage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import ExecutePage from './pages/ExecutePage'
@@ -18,14 +17,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/analyze"
         element={
@@ -50,6 +41,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* Redirect dashboard to analyze */}
+      <Route path="/dashboard" element={<Navigate to="/analyze" replace />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
     </Routes>
   )

@@ -2,11 +2,23 @@
   "id": "HALO-46",
   "title": "Create demo script",
   "type": "task",
-  "status": "open",
+  "status": "closed",
   "priority": 0,
   "description": "Step-by-step demo walkthrough for judges.\n\n## Demo Script (3-5 minutes)\n\n### Opening (30s)\n\"Ecommerce brands waste 20-30% of ad spend because they can't see what's working until it's too late. Meet Agatha - she finds the money you're leaving on the table.\"\n\n### The Hook (30s)\n\"In the next 60 seconds, Agatha will analyze this brand's $300k monthly ad spend and find optimization opportunities.\"\n\n### Live Demo (2 min)\n1. Login via Meta OAuth\n2. Select TL account\n3. Click \"Analyze\" - show loading\n4. REVEAL: \"Agatha found $152k in opportunities!\"\n5. Show recommendations:\n   - \"$88k wasted on TikTok (0 ROAS) - PAUSE\"\n   - \"$212k performer at 29x ROAS - SCALE 30%\"\n6. Approve recommendations\n7. Execute - show confirmation\n\n### Close (30s)\n\"Agatha identified $150k+ in opportunities in under 60 seconds. That's the power of AI-driven ad optimization.\"\n\n## Fallback\n- Pre-recorded video if live demo fails\n- BigQuery backup if Meta API fails",
-  "labels": ["demo", "hackathon", "presentation"],
+  "labels": [
+    "demo",
+    "hackathon",
+    "presentation"
+  ],
   "created": "2026-01-31T08:00:00Z",
   "updated": "2026-01-31T08:00:00Z",
-  "parent": "HALO-7"
+  "parent": "HALO-7",
+  "closedAt": "2026-02-01T05:05:56.248528",
+  "comments": [
+    {
+      "author": "recovery-sync",
+      "date": "2026-02-01T05:05:56.248531",
+      "text": "Closed by recovery sync: Demo script/flow documented in recovery files"
+    }
+  ]
 }

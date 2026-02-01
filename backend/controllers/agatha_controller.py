@@ -54,7 +54,7 @@ class AgathaController:
 
         # Run analysis
         analyze_agent = AnalyzeAgentModel()
-        analysis_result = analyze_agent.run_analysis(tenant, days=days)
+        analysis_result = analyze_agent.run_analysis(tenant, days=days, source=source)
 
         # Store in session
         self.session_manager.update_session(

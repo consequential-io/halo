@@ -3,30 +3,53 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTenants } from '../api/client'
 
+// Consequential Logo Component
+const ConsequentialLogo = ({ size = 32 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    <path d="M8 12C8 10.8954 8.89543 10 10 10H14C15.1046 10 16 10.8954 16 12V28C16 29.1046 15.1046 30 14 30H10C8.89543 30 8 29.1046 8 28V12Z" fill="#9AE65C"/>
+    <path d="M24 12C24 10.8954 24.8954 10 26 10H30C31.1046 10 32 10.8954 32 12V28C32 29.1046 31.1046 30 30 30H26C24.8954 30 24 29.1046 24 28V12Z" fill="#9AE65C"/>
+    <path d="M4 16C4 14.8954 4.89543 14 6 14H8V26H6C4.89543 26 4 25.1046 4 24V16Z" fill="#9AE65C" opacity="0.6"/>
+    <path d="M32 14H34C35.1046 14 36 14.8954 36 16V24C36 25.1046 35.1046 26 34 26H32V14Z" fill="#9AE65C" opacity="0.6"/>
+  </svg>
+)
+
 const styles = {
   container: {
     minHeight: '100vh',
-    background: '#f5f5f5',
+    background: '#0A0A0A',
+    backgroundImage: `
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+    `,
+    backgroundSize: '50px 50px',
   },
   header: {
-    background: 'white',
+    background: '#0A0A0A',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
     padding: '16px 32px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logo: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#667eea',
+  logoContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  logoText: {
+    fontSize: '20px',
+    fontWeight: 600,
+    color: '#FFFFFF',
   },
   logoutBtn: {
-    background: 'none',
-    border: '1px solid #ddd',
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '6px',
     padding: '8px 16px',
     cursor: 'pointer',
+    color: '#A1A1A1',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
   },
   main: {
     maxWidth: '800px',
@@ -36,36 +59,40 @@ const styles = {
   title: {
     fontSize: '28px',
     marginBottom: '8px',
-    color: '#1a1a2e',
+    color: '#FFFFFF',
+    fontWeight: 600,
   },
   subtitle: {
-    color: '#666',
+    color: '#A1A1A1',
     marginBottom: '32px',
   },
   card: {
-    background: 'white',
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '12px',
     padding: '32px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   },
   label: {
     display: 'block',
     fontSize: '14px',
-    fontWeight: 600,
+    fontWeight: 500,
     marginBottom: '8px',
-    color: '#333',
+    color: '#FFFFFF',
   },
   select: {
     width: '100%',
     padding: '12px',
     fontSize: '16px',
     borderRadius: '8px',
-    border: '1px solid #ddd',
+    border: '1px solid rgba(255,255,255,0.2)',
     marginBottom: '24px',
+    background: '#0A0A0A',
+    color: '#FFFFFF',
+    cursor: 'pointer',
   },
   button: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
+    background: '#9AE65C',
+    color: '#0A0A0A',
     border: 'none',
     borderRadius: '8px',
     padding: '14px 32px',
@@ -73,9 +100,11 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
     width: '100%',
+    transition: 'all 0.2s ease',
   },
   disabledBtn: {
-    background: '#ccc',
+    background: '#333',
+    color: '#666',
     cursor: 'not-allowed',
   },
 }
@@ -95,7 +124,6 @@ export default function DashboardPage() {
           setSelectedTenant(data.tenants[0].id)
         }
       } catch {
-        // Default tenants if API fails
         setTenants([
           { id: 'TL', name: 'Third Love' },
           { id: 'WH', name: 'Whispering Homes' },
@@ -118,8 +146,22 @@ export default function DashboardPage() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <div style={styles.logo}>Ad Spend Agent</div>
-        <button style={styles.logoutBtn} onClick={handleLogout}>
+        <div style={styles.logoContainer}>
+          <ConsequentialLogo size={28} />
+          <span style={styles.logoText}>Consequential</span>
+        </div>
+        <button
+          style={styles.logoutBtn}
+          onClick={handleLogout}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'
+            e.currentTarget.style.color = '#FFFFFF'
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+            e.currentTarget.style.color = '#A1A1A1'
+          }}
+        >
           Logout
         </button>
       </header>
@@ -149,6 +191,12 @@ export default function DashboardPage() {
             }}
             onClick={handleAnalyze}
             disabled={!selectedTenant}
+            onMouseOver={(e) => {
+              if (selectedTenant) e.currentTarget.style.background = '#8BD84E'
+            }}
+            onMouseOut={(e) => {
+              if (selectedTenant) e.currentTarget.style.background = '#9AE65C'
+            }}
           >
             Run Analysis
           </button>

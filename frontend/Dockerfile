@@ -4,7 +4,9 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG VITE_API_URL=""
+ARG VITE_API_TOKEN=""
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_TOKEN=$VITE_API_TOKEN
 RUN npm run build
 
 FROM nginx:alpine

@@ -1,0 +1,15 @@
+{
+  "id": "HALO-70",
+  "title": "Redesign recommendation cards to Consequential style",
+  "description": "Redesign RecommendationsPage cards:\n- Dark card bg #1A1A1A, border rgba(255,255,255,0.1), radius 12px, padding 24px\n- Header row: LEFT = category badge (green pill: 'High CPA', 'Low ROAS'), RIGHT = large impact metric (32-40px, #9AE65C for positive)\n- Below badge: provider info in gray (e.g. 'Facebook Ads \u2022 $1,200/day')\n- Body: bold white headline (18-20px), gray description (#A1A1A1)\n- Footer: Approve (green filled), Reject (red outlined) buttons\n- Grid: 2 columns desktop, 1 mobile, gap 16-24px",
+  "status": "closed",
+  "priority": 1,
+  "type": "task",
+  "createdAt": "2026-02-01T06:18:31.020752",
+  "labels": [
+    "ux",
+    "frontend",
+    "branding"
+  ],
+  "closedAt": "2026-02-01T06:24:35.887497"
+}

@@ -1,39 +1,25 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { execute, ExecuteResponse, ExecutionResult } from '../api/client'
+import { useAuth } from '../hooks/useAuth'
+import Layout from '../components/Layout'
 
 const styles = {
-  container: {
-    minHeight: '100vh',
-    background: '#f5f5f5',
-  },
-  header: {
-    background: 'white',
-    padding: '16px 32px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  headerRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  logo: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#667eea',
-    cursor: 'pointer',
-  },
-  main: {
-    maxWidth: '800px',
-    margin: '40px auto',
-    padding: '0 20px',
+    alignItems: 'flex-start',
+    marginBottom: '32px',
   },
   title: {
     fontSize: '28px',
+    fontWeight: 600,
+    color: '#FFFFFF',
     marginBottom: '8px',
-    color: '#1a1a2e',
   },
   subtitle: {
-    color: '#666',
-    marginBottom: '32px',
+    color: '#A1A1A1',
+    fontSize: '15px',
   },
   summary: {
     display: 'grid',
@@ -42,26 +28,39 @@ const styles = {
     marginBottom: '24px',
   },
   summaryCard: {
-    background: 'white',
-    borderRadius: '8px',
-    padding: '16px',
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '12px',
+    padding: '20px',
     textAlign: 'center' as const,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
   },
   summaryValue: {
-    fontSize: '24px',
+    fontSize: '28px',
     fontWeight: 700,
   },
   summaryLabel: {
     fontSize: '12px',
-    color: '#666',
+    color: '#A1A1A1',
     marginTop: '4px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+  },
+  dryRunBanner: {
+    background: 'rgba(100, 181, 246, 0.1)',
+    border: '1px solid rgba(100, 181, 246, 0.3)',
+    color: '#64B5F6',
+    padding: '16px 20px',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
   },
   card: {
-    background: 'white',
+    background: '#1A1A1A',
+    border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '12px',
     padding: '20px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
     marginBottom: '12px',
     display: 'flex',
     justifyContent: 'space-between',
@@ -73,45 +72,36 @@ const styles = {
   adName: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#1a1a2e',
+    color: '#FFFFFF',
     marginBottom: '4px',
   },
   message: {
     fontSize: '14px',
-    color: '#666',
+    color: '#A1A1A1',
   },
   statusBadge: {
-    padding: '6px 16px',
+    padding: '8px 16px',
     borderRadius: '20px',
     fontSize: '12px',
     fontWeight: 600,
     textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
   },
   success: {
-    background: '#e8f5e9',
-    color: '#2e7d32',
+    background: 'rgba(154, 230, 92, 0.15)',
+    color: '#9AE65C',
   },
   failed: {
-    background: '#fee',
-    color: '#c00',
+    background: 'rgba(255, 107, 107, 0.15)',
+    color: '#FF6B6B',
   },
   skipped: {
-    background: '#fff3e0',
-    color: '#e65100',
-  },
-  dryRunBanner: {
-    background: '#e3f2fd',
-    color: '#1565c0',
-    padding: '12px 20px',
-    borderRadius: '8px',
-    marginBottom: '24px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+    background: 'rgba(255, 183, 77, 0.15)',
+    color: '#FFB74D',
   },
   button: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
+    background: '#9AE65C',
+    color: '#0A0A0A',
     border: 'none',
     borderRadius: '8px',
     padding: '14px 32px',
@@ -119,19 +109,28 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
     marginTop: '24px',
+    transition: 'all 0.2s ease',
   },
   loading: {
     textAlign: 'center' as const,
-    padding: '60px 0',
+    padding: '80px 0',
   },
   spinner: {
     width: '48px',
     height: '48px',
-    border: '4px solid #f3f3f3',
-    borderTop: '4px solid #667eea',
+    border: '3px solid #333',
+    borderTop: '3px solid #9AE65C',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     margin: '0 auto 16px',
+  },
+  error: {
+    background: 'rgba(255, 107, 107, 0.1)',
+    border: '1px solid rgba(255, 107, 107, 0.3)',
+    color: '#FF6B6B',
+    padding: '20px',
+    borderRadius: '12px',
+    textAlign: 'center' as const,
   },
 }
 
@@ -140,6 +139,7 @@ export default function ExecutePage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const approvedAds = searchParams.get('ads')?.split(',').filter(Boolean) || undefined
+  const { tenantName } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -179,92 +179,99 @@ export default function ExecutePage() {
   }
 
   return (
-    <div style={styles.container}>
+    <Layout
+      tenantName={tenantName}
+      sessionId={sessionId}
+      hasAnalysis={true}
+      hasRecommendations={true}
+    >
       <style>
         {`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}
       </style>
 
-      <header style={styles.header}>
-        <div style={styles.logo} onClick={() => navigate('/dashboard')}>
-          Ad Spend Agent
+      <div style={styles.headerRow}>
+        <div>
+          <h1 style={styles.title}>Execution Results</h1>
+          <p style={styles.subtitle}>Review the results of executed recommendations</p>
         </div>
-      </header>
+      </div>
 
-      <main style={styles.main}>
-        <h1 style={styles.title}>Execution Results</h1>
-        <p style={styles.subtitle}>Review the results of executed recommendations</p>
+      {loading && (
+        <div style={styles.loading}>
+          <div style={styles.spinner}></div>
+          <p style={{ color: '#A1A1A1' }}>Executing recommendations...</p>
+        </div>
+      )}
 
-        {loading && (
-          <div style={styles.loading}>
-            <div style={styles.spinner}></div>
-            <p>Executing recommendations...</p>
-          </div>
-        )}
+      {error && (
+        <div style={styles.error}>{error}</div>
+      )}
 
-        {error && (
-          <div style={{ background: '#fee', color: '#c00', padding: '16px', borderRadius: '8px' }}>
-            {error}
-          </div>
-        )}
-
-        {data && !loading && (
-          <>
-            {data.summary.dry_run && (
-              <div style={styles.dryRunBanner}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                </svg>
-                <span>
-                  <strong>Dry Run Mode</strong> - No actual changes were made. This is a simulation.
-                </span>
-              </div>
-            )}
-
-            <div style={styles.summary}>
-              <div style={styles.summaryCard}>
-                <div style={{ ...styles.summaryValue, color: '#667eea' }}>
-                  {data.summary.total_processed}
+      {data && !loading && (
+        <>
+          {data.summary.dry_run && (
+            <div style={styles.dryRunBanner}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+              </svg>
+              <div>
+                <strong>Dry Run Mode</strong>
+                <div style={{ fontSize: '14px', opacity: 0.8, marginTop: '2px' }}>
+                  No actual changes were made. This is a simulation.
                 </div>
-                <div style={styles.summaryLabel}>Processed</div>
-              </div>
-              <div style={styles.summaryCard}>
-                <div style={{ ...styles.summaryValue, color: '#27ae60' }}>
-                  {data.summary.success}
-                </div>
-                <div style={styles.summaryLabel}>Success</div>
-              </div>
-              <div style={styles.summaryCard}>
-                <div style={{ ...styles.summaryValue, color: '#e74c3c' }}>
-                  {data.summary.failed}
-                </div>
-                <div style={styles.summaryLabel}>Failed</div>
-              </div>
-              <div style={styles.summaryCard}>
-                <div style={{ ...styles.summaryValue, color: '#f39c12' }}>
-                  {data.summary.skipped}
-                </div>
-                <div style={styles.summaryLabel}>Skipped</div>
               </div>
             </div>
+          )}
 
-            {data.results.map((result: ExecutionResult, index: number) => (
-              <div key={index} style={styles.card}>
-                <div style={styles.adInfo}>
-                  <div style={styles.adName}>{result.ad_name}</div>
-                  <div style={styles.message}>{result.message}</div>
-                </div>
-                <span style={{ ...styles.statusBadge, ...getStatusStyle(result.status) }}>
-                  {result.status}
-                </span>
+          <div style={styles.summary}>
+            <div style={styles.summaryCard}>
+              <div style={{ ...styles.summaryValue, color: '#9AE65C' }}>
+                {data.summary.total_processed}
               </div>
-            ))}
+              <div style={styles.summaryLabel}>Processed</div>
+            </div>
+            <div style={styles.summaryCard}>
+              <div style={{ ...styles.summaryValue, color: '#9AE65C' }}>
+                {data.summary.success}
+              </div>
+              <div style={styles.summaryLabel}>Success</div>
+            </div>
+            <div style={styles.summaryCard}>
+              <div style={{ ...styles.summaryValue, color: '#FF6B6B' }}>
+                {data.summary.failed}
+              </div>
+              <div style={styles.summaryLabel}>Failed</div>
+            </div>
+            <div style={styles.summaryCard}>
+              <div style={{ ...styles.summaryValue, color: '#FFB74D' }}>
+                {data.summary.skipped}
+              </div>
+              <div style={styles.summaryLabel}>Skipped</div>
+            </div>
+          </div>
 
-            <button style={styles.button} onClick={() => navigate('/dashboard')}>
-              Back to Dashboard
-            </button>
-          </>
-        )}
-      </main>
-    </div>
+          {data.results.map((result: ExecutionResult, index: number) => (
+            <div key={index} style={styles.card}>
+              <div style={styles.adInfo}>
+                <div style={styles.adName}>{result.ad_name}</div>
+                <div style={styles.message}>{result.message}</div>
+              </div>
+              <span style={{ ...styles.statusBadge, ...getStatusStyle(result.status) }}>
+                {result.status}
+              </span>
+            </div>
+          ))}
+
+          <button
+            style={styles.button}
+            onClick={() => navigate('/analyze')}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#8BD84E' }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#9AE65C' }}
+          >
+            Start New Analysis
+          </button>
+        </>
+      )}
+    </Layout>
   )
 }
