@@ -2,27 +2,17 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getMetaLoginUrl } from '../api/client'
 
-// Consequential Logo Component
+// Consequential Logo Component - Green C + vertical bars
 const ConsequentialLogo = ({ size = 40 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    {/* C shape (crescent) */}
     <path
-      d="M8 12C8 10.8954 8.89543 10 10 10H14C15.1046 10 16 10.8954 16 12V28C16 29.1046 15.1046 30 14 30H10C8.89543 30 8 29.1046 8 28V12Z"
+      d="M20 4C11.163 4 4 11.163 4 20C4 28.837 11.163 36 20 36C22.5 36 24.8 35.4 26.8 34.3L22 28C21.4 28.3 20.7 28.5 20 28.5C15.3 28.5 11.5 24.7 11.5 20C11.5 15.3 15.3 11.5 20 11.5C20.7 11.5 21.4 11.7 22 12L26.8 5.7C24.8 4.6 22.5 4 20 4Z"
       fill="#9AE65C"
     />
-    <path
-      d="M24 12C24 10.8954 24.8954 10 26 10H30C31.1046 10 32 10.8954 32 12V28C32 29.1046 31.1046 30 30 30H26C24.8954 30 24 29.1046 24 28V12Z"
-      fill="#9AE65C"
-    />
-    <path
-      d="M4 16C4 14.8954 4.89543 14 6 14H8V26H6C4.89543 26 4 25.1046 4 24V16Z"
-      fill="#9AE65C"
-      opacity="0.6"
-    />
-    <path
-      d="M32 14H34C35.1046 14 36 14.8954 36 16V24C36 25.1046 35.1046 26 34 26H32V14Z"
-      fill="#9AE65C"
-      opacity="0.6"
-    />
+    {/* Two vertical bars */}
+    <rect x="28" y="8" width="4" height="24" rx="2" fill="#9AE65C"/>
+    <rect x="34" y="12" width="4" height="16" rx="2" fill="#9AE65C"/>
   </svg>
 )
 
@@ -140,7 +130,7 @@ export default function LoginPage() {
   }
 
   const handleDemoLogin = () => {
-    login('Demo Account')
+    login('Third Love')
     navigate('/analyze')
   }
 
