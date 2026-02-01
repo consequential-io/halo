@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { analyze, AnalyzeResponse } from '../api/client'
+import { analyze, AnalyzeResponse, trackEvent } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import DateRangePicker from '../components/DateRangePicker'
@@ -175,6 +175,11 @@ export default function AnalyzePage() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnalyzeResponse | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // Track page view (successful login)
+  useEffect(() => {
+    trackEvent('page_analyze')
+  }, [])
 
   // Load any existing session
   useEffect(() => {

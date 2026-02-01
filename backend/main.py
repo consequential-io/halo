@@ -4,8 +4,10 @@ Agatha Backend - FastAPI Application.
 Multi-agent ad spend anomaly detection and optimization.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+import json
 
 from config.settings import settings
 from routes import auth_router, agent_router
@@ -51,6 +53,27 @@ async def health_check() -> HealthResponse:
 async def health():
     """Alternative health check for Cloud Run."""
     return {"status": "healthy"}
+
+
+@app.get("/api/track")
+async def track_event(event: str, request: Request):
+    """Simple event tracking - logs to Cloud Logging."""
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    referer = request.headers.get("referer", "direct")
+    user_agent = request.headers.get("user-agent", "unknown")
+
+    # Structured log for Cloud Logging
+    log_entry = {
+        "type": "TRACK",
+        "event": event,
+        "timestamp": datetime.utcnow().isoformat(),
+        "ip": client_ip.split(",")[0].strip() if client_ip else "unknown",
+        "referer": referer,
+        "user_agent": user_agent,
+    }
+    print(f"TRACK: {json.dumps(log_entry)}")
+
+    return {"ok": True}
 
 
 if __name__ == "__main__":

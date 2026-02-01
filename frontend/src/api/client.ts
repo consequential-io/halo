@@ -109,3 +109,10 @@ export async function getMetaLoginUrl(): Promise<{ oauth_url: string }> {
   const response = await apiClient.post('/auth/meta/login')
   return response.data
 }
+
+// Simple event tracking - fire and forget
+export function trackEvent(event: string): void {
+  fetch(`${API_URL}/api/track?event=${encodeURIComponent(event)}`).catch(() => {
+    // Silently fail - tracking should never break the app
+  })
+}

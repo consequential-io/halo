@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { getMetaLoginUrl } from '../api/client'
+import { getMetaLoginUrl, trackEvent } from '../api/client'
 
 // Consequential Logo Component - Green C + vertical bars
 const ConsequentialLogo = ({ size = 40 }: { size?: number }) => (
@@ -116,7 +117,13 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
 
+  // Track page load
+  useEffect(() => {
+    trackEvent('page_login')
+  }, [])
+
   const handleFacebookLogin = async () => {
+    trackEvent('login_click_facebook')
     try {
       const { oauth_url } = await getMetaLoginUrl()
       if (oauth_url) {
@@ -130,6 +137,7 @@ export default function LoginPage() {
   }
 
   const handleDemoLogin = () => {
+    trackEvent('login_click_demo')
     login('Third Love')
     navigate('/analyze')
   }
