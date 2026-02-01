@@ -3,7 +3,7 @@
 ## Overview
 Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 
-**Approach:** AI-First Implementation (validate AI value before infrastructure)
+**Approach:** AI-First (LLM reasons with guidelines, Python validates)
 
 ## Decisions Made
 
@@ -16,10 +16,9 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 | BigQuery views | TL + WH views identified | See BigQuery Data Access section |
 | Meta OAuth | Custom OAuth with httpx | See Meta API Integration section |
 | Meta creatives | Two-step fetch pattern | See Meta API Integration section |
-| OTB Prod API | Test fixtures only | Use response data to validate our classification logic |
-| AI-first validation | Match production output schema | Analyze Agent should produce same fields as OTB API |
+| Classification | AI-first (LLM reasons, Python validates) | Not rules-based |
 
-## Open Questions (Remaining)
+## Open Questions
 
 | # | Question | Owner | Status |
 |---|----------|-------|--------|
@@ -27,10 +26,141 @@ Multi-agent ad spend optimization system for hackathon demo (Feb 1, 09:00 IST)
 | 7 | Meta Ad creatives access? | Hemanth | RESOLVED - see Meta API section |
 | 8 | Demo scenario/script? | Jaidev | TL account showing $88k TikTok waste |
 
-## Meta API Integration (RESOLVED)
+---
+
+## AI-First Architecture
+
+```
+Data → LLM reasons with guidelines → Python validates → Output
+       ↑ Uses judgment + context     ↑ Catches hallucinations
+```
+
+| Task | Rules-Based (Wrong) | AI-First (Right) |
+|------|---------------------|------------------|
+| Classification | Python threshold check | LLM reasons with guidelines |
+| Edge cases | Falls through to default | LLM handles nuance |
+| Explanations | Template strings | Natural language citing data |
+
+---
+
+## Input Data Schema
+
+### Raw Data (from BigQuery CSV)
+
+Daily ad-level data with these columns:
+```python
+{
+    "spend": float,
+    "return_on_ad_spend_roas": float,
+    "impressions": int,
+    "cpc": float,
+    "cpm": float,
+    "ctr": float,
+    "clicks": int,
+    "datetime_PST": str,           # "2026-01-30 00:00:00"
+    "ad_group_name": str,
+    "ad_name": str,
+    "ad_provider": str,            # "Google Ads", "Facebook Ads", "TikTok Ads"
+    "creative_call_to_action_type": str,
+    "creative_object_type": str,   # "Search", "SHARE", "WEB_CONVERSIONS"
+    "customer_entry_page": str,
+    "customer_lastVisit_campaign": str,
+    "store": str                   # "US"
+}
+```
+
+### Aggregated Input (passed to Analyze Agent)
+
+```python
+{
+    "account_avg_roas": float,     # Weighted avg: SUM(roas * spend) / SUM(spend)
+    "ads": [
+        {
+            "ad_name": str,
+            "ad_provider": str,    # "Google Ads", "Facebook Ads", "TikTok Ads"
+            "spend": float,        # SUM(spend) for this ad
+            "roas": float,         # Weighted avg ROAS for this ad
+            "days_active": int     # COUNT(DISTINCT date)
+        }
+    ]
+}
+```
+
+### Data Stats (ThirdLove)
+- Total spend: $4.5M
+- Account avg ROAS: 6.90
+- Unique ads: 1,084
+- Date range: 299 days
+
+### Test Fixture
+See `backend/fixtures/thirdlove_ads.json` with 10 real ads covering all classifications:
+- GOOD: "Thirdlove® Bras" (ROAS 29.58, 4.3× avg)
+- OK: "DPA-Catalog-AllProducts 22382-D" (ROAS 7.76, 1.1× avg)
+- WARNING: "purchase retention DPA-catalogsales" (ROAS 6.03, 0.87× avg)
+- BAD: "7369346196164364049 catalog carousel" (ROAS 0.00, TikTok)
+- WAIT: "Thirdlove® 4th Of July Sale" (6 days only)
+
+---
+
+## Output Schema (Canonical)
+
+Every Analyze Agent response must match this structure:
+
+```python
+{
+    # Identity
+    "ad_name": str,
+    "ad_provider": str,           # Optional: "Google Ads", "Facebook Ads", "TikTok Ads"
+
+    # Metrics (cited from source data)
+    "metrics": {
+        "spend": float,
+        "roas": float,
+        "days_active": int,
+        "account_avg_roas": float,
+    },
+
+    # AI Classification
+    "classification": str,       # "GOOD", "OK", "WARNING", "BAD", "WAIT"
+    "recommended_action": str,   # "SCALE", "MONITOR", "REVIEW", "REDUCE", "PAUSE", "WAIT"
+    "confidence": str,           # "HIGH", "MEDIUM", "LOW"
+
+    # Chain-of-Thought (required)
+    "chain_of_thought": {
+        "data_extracted": {},        # What metrics were found
+        "comparison": {},            # ROAS ratio vs account avg
+        "qualification": {},         # Spend/days thresholds met?
+        "classification_logic": {},  # Why this classification
+        "confidence_rationale": {}   # Why this confidence level
+    },
+
+    # User-facing
+    "user_explanation": str,     # 1-2 sentences citing specific numbers
+}
+```
+
+---
+
+## Decision Thresholds (Guidelines for LLM)
+
+**Account Baseline (ThirdLove):** $4.5M spend, 6.90 ROAS, 298 days
+
+| ROAS vs Avg | Spend | Days | Classification | Action |
+|-------------|-------|------|----------------|--------|
+| >= 2× | >= $1k | >= 7 | GOOD | Scale 30-100% |
+| 1× - 2× | >= $1k | >= 7 | OK | Monitor |
+| 0.5× - 1× | >= $10k | >= 7 | WARNING | Review |
+| < 0.5× | >= $10k | >= 7 | BAD | Reduce 50% |
+| = 0 | >= $5k | >= 7 | BAD | Pause |
+| Any | < $1k | < 7 | WAIT | Learning |
+
+**These are GUIDELINES.** LLM may deviate with reasoning (e.g., "1.95× avg but upward trend → GOOD").
+
+---
+
+## Meta API Integration
 
 ### Facebook Login Pattern
-From: `/Users/jaidevk/Work/dev/insights-dashboard/src/screens/LoginScreen.jsx`
 
 **Frontend (simple redirect):**
 ```javascript
@@ -40,13 +170,12 @@ const handleFacebookLogin = () => {
 };
 ```
 
-**Backend route needed:** `/auth/facebook` (Express/FastAPI OAuth handler)
+**Backend route needed:** `/auth/facebook` (FastAPI OAuth handler)
 - Redirects to Facebook OAuth
 - Handles callback with token exchange
 - Stores access token in session
 
 ### Meta Ad Creative Preview
-From: `/Users/jaidevk/Work/dev/insights-dashboard/src/components/analytics/component-library/composites/AdPreview/`
 
 **Two-step fetch pattern:**
 
@@ -72,17 +201,12 @@ Response: {
 }
 ```
 
-**Backend endpoints needed:**
-1. `GET /meta-ads/ads/{ad_id}` - Fetch ad details from Meta Marketing API
-2. `GET /meta-ads/creative/{creative_id}/preview` - Fetch creative preview HTML
-
 ### Required Meta API Scopes
-Based on the patterns, these scopes are needed:
 - `ads_read` - Read ad account data
 - `ads_management` - For Execute Agent (if doing real writes)
 - `business_management` - Access business accounts
 
-### Meta Marketing API Endpoints (Backend Implementation)
+### Meta Marketing API Endpoints
 ```python
 # Ad details
 GET https://graph.facebook.com/v19.0/{ad_id}
@@ -158,7 +282,9 @@ async def facebook_callback(code: str, state: str = "/"):
         )
 ```
 
-## Architecture (from requirements)
+---
+
+## Architecture
 
 ```
 Meta OAuth → Agatha Orchestrator
@@ -166,8 +292,10 @@ Meta OAuth → Agatha Orchestrator
     ┌───────────────┼───────────────┐
     ▼               ▼               ▼
 ANALYZE         RECOMMEND        EXECUTE
-(Meta/BQ read)  (AI analysis)   (Mock write)
+(AI reasoning)  (AI reasoning)  (Mock write)
 ```
+
+---
 
 ## Team Feature Split
 
@@ -179,6 +307,8 @@ ANALYZE         RECOMMEND        EXECUTE
 | **Foundation** | Person B | Scaffolding, session manager, base controller |
 | **Auth/OAuth** | Person B | Meta OAuth integration |
 | **Demo prep** | Both | Script, fallback, submission materials |
+
+---
 
 ## Data Source Strategy
 
@@ -196,7 +326,9 @@ ANALYZE         RECOMMEND        EXECUTE
 └─────────────────────────────────────────┘
 ```
 
-## BigQuery Data Access (RESOLVED)
+---
+
+## BigQuery Data Access
 
 ### Views
 | Tenant | View |
@@ -213,26 +345,33 @@ Each metric type requires filtering by authoritative source to avoid double-coun
 | **Revenue** | `WHERE data_source = 'Shopify'` | gross_sales, net_sales, total_sales, order_id |
 | **Engagement** | `WHERE data_source IN ('CDP (Blotout)', 'CDP GA4 Totals')` | session_id, page_views |
 
-### Sample Queries
-
-**Ad Performance Query (Single Source):**
+### Key Query Pattern
 ```sql
 SELECT
     ad_name,
     ad_provider,
-    SUM(spend) as total_spend,
-    SUM(ROAS) as total_roas,
-    SUM(ad_click) as clicks,
-    AVG(CPC) as avg_cpc,
-    AVG(CTR) as avg_ctr
+    SUM(spend) as spend,
+    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as roas,
+    DATE_DIFF(MAX(DATE(datetime_UTC)), MIN(DATE(datetime_UTC)), DAY) + 1 as days_active
 FROM `otb-dev-platform.master.northstar_master_combined_tl`
 WHERE data_source = 'Ad Providers'
   AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
 GROUP BY ad_name, ad_provider
-ORDER BY total_spend DESC
+ORDER BY spend DESC
 ```
 
-**ROAS Calculation (Mixed Sources - Use CTEs):**
+### Account Average Calculation
+```sql
+-- Calculate account average ROAS (last 30 days)
+SELECT
+    SAFE_DIVIDE(SUM(ROAS * spend), SUM(spend)) as weighted_avg_roas
+FROM `otb-dev-platform.master.northstar_master_combined_tl`
+WHERE data_source = 'Ad Providers'
+  AND datetime_UTC >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND spend > 0
+```
+
+### ROAS Calculation (Mixed Sources - Use CTEs)
 ```sql
 WITH revenue AS (
   SELECT
@@ -273,52 +412,279 @@ ORDER BY r.date DESC
 - `store` - Market (US, IND)
 - `datetime_UTC` - Timestamp
 
-## Model Configuration
+---
+
+## Analyze Agent Prompt
 
 ```python
-# config/settings.py
-import os
+ANALYZE_AGENT_PROMPT = """
+You are analyzing ad performance data. Your classifications MUST be grounded in actual metrics.
 
-MODEL_CONFIG = {
-    "provider": os.getenv("AI_PROVIDER", "gemini"),  # gemini | openai
-    "gemini": {
-        "model": os.getenv("GEMINI_MODEL", "gemini-3.0"),
-    },
-    "openai": {
-        "model": os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
-    }
+## RULES
+1. NEVER invent metrics - only use values from provided data
+2. ALWAYS cite specific numbers when making claims
+3. ALWAYS compare to account average (provided in context)
+4. If data insufficient, classify as WAIT
+
+## CLASSIFICATION GUIDELINES (use judgment for edge cases)
+- GOOD: ROAS >= 2× avg, spend >= $1k, days >= 7 → SCALE
+- OK: ROAS 1-2× avg, spend >= $1k, days >= 7 → MONITOR
+- WARNING: ROAS 0.5-1× avg, spend >= $10k, days >= 7 → REVIEW
+- BAD: ROAS < 0.5× avg (spend >= $10k) OR ROAS = 0 (spend >= $5k), days >= 7 → REDUCE/PAUSE
+- WAIT: spend < $1k OR days < 7 → WAIT
+
+## OUTPUT FORMAT
+{
+  "ad_name": "<exact name from data>",
+  "metrics": {
+    "spend": <actual>,
+    "roas": <actual>,
+    "days_active": <actual>,
+    "account_avg_roas": <actual>
+  },
+  "chain_of_thought": {
+    "data_extracted": {"spend": ..., "roas": ..., "days": ...},
+    "comparison": {"roas_ratio": "<ad_roas> / <avg> = <ratio>"},
+    "qualification": {"spend_ok": true/false, "days_ok": true/false},
+    "classification_logic": {"result": "...", "reason": "..."},
+    "confidence_rationale": {"level": "...", "reason": "..."}
+  },
+  "classification": "GOOD|OK|WARNING|BAD|WAIT",
+  "recommended_action": "SCALE|MONITOR|REVIEW|REDUCE|PAUSE|WAIT",
+  "confidence": "HIGH|MEDIUM|LOW",
+  "user_explanation": "<1-2 sentences citing numbers>"
 }
+"""
 ```
 
-## AI-First Implementation Timeline
+
+## Few-Shot Examples
+
+```python
+FEW_SHOT_EXAMPLES = """
+## GOOD SPEND
+Input: "Thirdlove® Bras" — $212k spend, 29.58 ROAS, 30 days, account avg 6.88
+
+{
+  "ad_name": "Thirdlove® Bras",
+  "metrics": {"spend": 212000, "roas": 29.58, "days_active": 30, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "comparison": {"roas_ratio": "29.58 / 6.88 = 4.3×"},
+    "qualification": {"spend_ok": true, "days_ok": true},
+    "classification_logic": {"result": "GOOD", "reason": "4.3× avg exceeds 2× threshold"}
+  },
+  "classification": "GOOD",
+  "recommended_action": "SCALE",
+  "confidence": "HIGH",
+  "user_explanation": "ROAS of 29.58 is 4.3× your account average. Scale budget 50-100%."
+}
+
+## BAD SPEND (Zero ROAS)
+Input: "TikTok Campaign Q4" — $88k spend, 0.00 ROAS, 45 days, account avg 6.88
+
+{
+  "ad_name": "TikTok Campaign Q4",
+  "metrics": {"spend": 88000, "roas": 0.0, "days_active": 45, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "comparison": {"roas_ratio": "0.0 / 6.88 = 0×", "is_zero": true},
+    "qualification": {"spend_ok": true, "days_ok": true},
+    "classification_logic": {"result": "BAD", "reason": "Zero ROAS after $88k and 45 days"}
+  },
+  "classification": "BAD",
+  "recommended_action": "PAUSE",
+  "confidence": "HIGH",
+  "user_explanation": "Zero return on $88k over 45 days. Pause immediately."
+}
+
+## WAIT (Insufficient Data)
+Input: "New Spring Collection" — $800 spend, 2.50 ROAS, 4 days, account avg 6.88
+
+{
+  "ad_name": "New Spring Collection",
+  "metrics": {"spend": 800, "roas": 2.50, "days_active": 4, "account_avg_roas": 6.88},
+  "chain_of_thought": {
+    "qualification": {"spend_ok": false, "days_ok": false},
+    "classification_logic": {"result": "WAIT", "reason": "Only 4 days and $800 spend"}
+  },
+  "classification": "WAIT",
+  "recommended_action": "WAIT",
+  "confidence": "LOW",
+  "user_explanation": "Only 4 days with $800 spend. Need more data before classification."
+}
+"""
+```
+
+---
+
+## Recommend Agent Prompt
+
+```python
+RECOMMEND_AGENT_PROMPT = """
+Generate actionable recommendations from Analyze Agent output.
+
+For each recommendation, MUST include:
+1. Source metrics (from Analyze output)
+2. Calculation showing derivation
+3. Dollar impact estimate
+
+## OUTPUT FORMAT
+{
+  "ad_name": "...",
+  "action": "SCALE|REDUCE|PAUSE",
+  "current_spend": <number>,
+  "change_percentage": <number>,
+  "proposed_new_spend": <number>,
+  "expected_impact": {
+    "calculation": "<show math>",
+    "estimated_revenue_change": <number>
+  },
+  "confidence": "HIGH|MEDIUM|LOW",
+  "rationale": "<cite specific metrics>"
+}
+
+## EXAMPLE
+"Scale 'Thirdlove® Bras' budget by 75%"
+- Current spend: $212,000
+- ROAS: 29.58 (4.3× account avg)
+- Proposed increase: $159,000
+- Expected revenue: $159,000 × 29.58 = $4.7M
+"""
+```
+
+---
+
+## Execute Agent Prompt
+
+```python
+EXECUTE_AGENT_PROMPT = """
+Execute approved recommendations. For hackathon, this is MOCK ONLY.
+
+## INPUT
+List of approved recommendations from Recommend Agent
+
+## OUTPUT
+{
+  "executed": [
+    {
+      "ad_name": "...",
+      "action_taken": "SCALED|REDUCED|PAUSED",
+      "old_budget": <number>,
+      "new_budget": <number>,
+      "status": "SUCCESS|MOCK",
+      "message": "Budget updated from $X to $Y"
+    }
+  ],
+  "summary": "Executed N actions affecting $X in spend"
+}
+
+## MOCK MODE
+Return success with "[MOCK]" prefix in messages. No actual API calls.
+"""
+```
+
+---
+
+## Validation Layer
+
+Single canonical validator (runs after LLM response):
+
+```python
+# backend/helpers/validators.py
+
+def validate_analyze_output(llm_response: dict, source_data: dict) -> tuple[bool, list[str]]:
+    """
+    Validates LLM output is grounded and complete.
+    Returns (is_valid, list_of_violations)
+
+    Checks:
+    1. Required fields present
+    2. Cited metrics match source data
+    3. CoT chain complete
+    4. Classification values valid
+
+    Does NOT check classification "correctness" - LLM judgment allowed.
+    """
+    violations = []
+
+    # 1. Required fields
+    required = ["ad_name", "metrics", "classification", "recommended_action",
+                "confidence", "chain_of_thought", "user_explanation"]
+    for field in required:
+        if field not in llm_response:
+            violations.append(f"Missing field: {field}")
+
+    # 2. Cited metrics match source (within tolerance)
+    if "metrics" in llm_response:
+        cited = llm_response["metrics"]
+        if abs(cited.get("spend", 0) - source_data.get("spend", 0)) > 1:
+            violations.append(f"Spend mismatch: cited {cited.get('spend')}, actual {source_data.get('spend')}")
+        if abs(cited.get("roas", 0) - source_data.get("roas", 0)) > 0.01:
+            violations.append(f"ROAS mismatch: cited {cited.get('roas')}, actual {source_data.get('roas')}")
+
+    # 3. CoT completeness
+    cot_required = ["data_extracted", "comparison", "qualification",
+                    "classification_logic", "confidence_rationale"]
+    if "chain_of_thought" in llm_response:
+        for step in cot_required:
+            if step not in llm_response["chain_of_thought"]:
+                violations.append(f"Missing CoT step: {step}")
+
+    # 4. Valid classification values
+    if llm_response.get("classification") not in ["GOOD", "OK", "WARNING", "BAD", "WAIT"]:
+        violations.append(f"Invalid classification: {llm_response.get('classification')}")
+
+    return (len(violations) == 0, violations)
+
+
+def handle_validation_failure(llm_response: dict, violations: list[str], retry_count: int) -> dict:
+    """
+    Handle validation failures with retry or graceful degradation.
+    """
+    if retry_count < 2:
+        # Retry with feedback
+        return {"action": "retry", "feedback": violations}
+    else:
+        # Graceful degradation after 2 retries
+        return {
+            "action": "degrade",
+            "result": {
+                "ad_name": llm_response.get("ad_name", "unknown"),
+                "classification": "MANUAL_REVIEW",
+                "user_explanation": "Unable to classify automatically. Please review manually.",
+                "violations": violations
+            }
+        }
+```
+
+---
+
+## Timeline
 
 **Start:** Jan 31, 17:30 IST | **Demo:** Feb 1, 09:00 IST | **Available:** 15.5 hours
 
-### Milestones & Gates
-
-| Milestone | Target | Hours | Gate |
-|-----------|--------|-------|------|
-| Minimal setup + mock tool | Jan 31, 18:30 | 1h | - |
-| **Analyze Agent + fixtures** | Jan 31, 21:00 | 2.5h | - |
-| **GATE 1** | Jan 31, 21:30 | 0.5h | Grades match fixtures? |
-| **Recommend Agent** | Jan 31, 23:30 | 2h | - |
-| **GATE 2** | Feb 1, 00:00 | 0.5h | Recommendations sensible? |
-| BigQuery tool + live data | Feb 1, 01:30 | 1.5h | - |
-| **GATE 3** | Feb 1, 02:00 | 0.5h | Live data quality OK? |
-| Execute Agent (mock) | Feb 1, 03:30 | 1.5h | - |
-| FastAPI routes | Feb 1, 05:00 | 1.5h | - |
-| Frontend basic UI | Feb 1, 06:30 | 1.5h | - |
-| Integration & Testing | Feb 1, 07:30 | 1h | - |
-| Demo ready | Feb 1, 08:30 | 1h | Buffer |
-| **DEMO** | Feb 1, 09:00 | - | - |
+| Milestone | Target | Gate |
+|-----------|--------|------|
+| Minimal setup + mock tool | 18:30 | - |
+| Analyze Agent + fixtures | 21:00 | - |
+| **GATE 1** | 21:30 | CoT complete + metrics grounded? |
+| Recommend Agent | 23:30 | - |
+| **GATE 2** | 00:00 | Recommendations sensible? |
+| BigQuery integration | 01:30 | - |
+| **GATE 3** | 02:00 | Live data quality OK? |
+| Execute Agent (mock) | 03:30 | - |
+| FastAPI routes | 05:00 | - |
+| Frontend basic UI | 06:30 | - |
+| Integration | 07:30 | - |
+| Buffer | 08:30 | - |
+| **DEMO** | 09:00 | - |
 
 ### Gate Definitions
 
-| Gate | Question | Pass | Fail Action |
-|------|----------|------|-------------|
-| **Gate 1** | Does Analyze Agent produce correct grades vs fixtures? | Grades/segments match production API | Fix classification logic before proceeding |
-| **Gate 2** | Are recommendations actionable and sensible? | Human review approves | Simplify recommendation logic |
-| **Gate 3** | Does live BigQuery data produce same quality? | Comparable output | Use fixtures for demo (fallback) |
+| Gate | Question | Pass Criteria | Fail Action |
+|------|----------|---------------|-------------|
+| **1** | Grounded reasoning? | CoT complete, metrics match source | Fix prompt, add examples |
+| **2** | Actionable recs? | Cites metrics, shows calculation | Simplify prompt |
+| **3** | Live data OK? | Same quality as fixtures | Use fixtures (fallback) |
 
 ### Critical Path
 
@@ -356,55 +722,46 @@ NOW (17:30)
 09:00 DEMO
 ```
 
-## Implementation Tasks (AI-First Order)
+---
+
+## Implementation Tasks
 
 ### Phase 1: AI Validation (17:30 - 00:00)
 
-| Task | Description | Deliverable |
-|------|-------------|-------------|
-| **P1-1** | Minimal pyproject.toml + settings | Just enough to run agents |
-| **P1-2** | Mock data tool (returns fixture JSON) | `get_ad_data()` tool |
-| **P1-3** | Analyze Agent with classification logic | Grades, segments, scores |
-| **P1-4** | GATE 1: Validate vs fixtures | Compare output to production API |
-| **P1-5** | Recommend Agent | Budget + creative recommendations |
-| **P1-6** | GATE 2: Human review | Are recommendations actionable? |
+| Task | Deliverable |
+|------|-------------|
+| P1-1 | Minimal pyproject.toml + settings |
+| P1-2 | Mock data tool (`get_ad_data()`) |
+| P1-3 | Analyze Agent with prompt + validation |
+| P1-4 | GATE 1: Validate output |
+| P1-5 | Recommend Agent with grounded output |
+| P1-6 | GATE 2: Human review |
 
 ### Phase 2: Data Integration (00:00 - 02:00)
 
-| Task | Description | Deliverable |
-|------|-------------|-------------|
-| **P2-1** | BigQuery data tool | Real data connector |
-| **P2-2** | Re-run agents with live data | Validate quality |
-| **P2-3** | GATE 3: Quality check | Same output quality? |
+| Task | Deliverable |
+|------|-------------|
+| P2-1 | BigQuery data tool |
+| P2-2 | Re-run agents with live data |
+| P2-3 | GATE 3: Quality check |
 
 ### Phase 3: API & Execute (02:00 - 05:00)
 
-| Task | Description | Deliverable |
-|------|-------------|-------------|
-| **P3-1** | Execute Agent (mock writes) | Confirmation messages |
-| **P3-2** | FastAPI app + routes | `/analyze`, `/recommend`, `/execute` |
-| **P3-3** | Session/state management | Request context |
+| Task | Deliverable |
+|------|-------------|
+| P3-1 | Execute Agent (mock) |
+| P3-2 | FastAPI routes (`/analyze`, `/recommend`, `/execute`) |
+| P3-3 | Session management |
 
 ### Phase 4: Frontend & Demo (05:00 - 08:30)
 
-| Task | Description | Deliverable |
-|------|-------------|-------------|
-| **P4-1** | Minimal React frontend | Login, recommendations, execute |
-| **P4-2** | Integration testing | E2E flow works |
-| **P4-3** | Demo script + fallback | Prepared for anything |
+| Task | Deliverable |
+|------|-------------|
+| P4-1 | Minimal React UI |
+| P4-2 | Integration testing |
+| P4-3 | Demo script + fallback |
 
-## Legacy Task Mapping (Beads Issues)
-
-For reference, original beads issues map to new phases:
-
-| Original | New Phase | Status |
-|----------|-----------|--------|
-| HALO-E0 (Scaffolding) | P1-1, P1-2 | Minimal only |
-| HALO-E1 (Foundation) | P2-1, P3-2, P3-3 | Deferred |
-| HALO-E2 (Agents) | P1-3, P1-5, P3-1 | AI-first priority |
-| HALO-E3 (Routes) | P3-2 | After agents validated |
-| HALO-E4 (Frontend) | P4-1 | Last |
-| HALO-E5 (Integration) | P4-2, P4-3 | Final |
+---
 
 ## File Structure
 
@@ -432,7 +789,9 @@ halo/
 │   ├── helpers/
 │   │   ├── __init__.py
 │   │   ├── tools.py               # Agent tools (BQ, Meta)
-│   │   └── callback_helper.py     # Callbacks
+│   │   └── validators.py          # validate_analyze_output()
+│   ├── fixtures/
+│   │   └── thirdlove_ads.json     # Test data
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── requests.py
@@ -449,26 +808,25 @@ halo/
 │   │   └── components/
 │   └── .env.local.example
 └── docs/
-    ├── requirements-agatha.md
-    └── brainstorm-session-2025-01-31.md
+    ├── implementation-plan.md
+    └── requirements-agatha.md
 ```
 
-## Key Patterns to Reuse (from otb-agents)
+---
+
+## Key Patterns (from otb-agents)
 
 ### Agent Definition
 ```python
 from google.adk.agents import LlmAgent
+from google.adk.tools import FunctionTool
 
-class AnalyzeAgentModel:
-    def __init__(self):
-        self.agent = LlmAgent(
-            name="analyze_agent",
-            model="gemini-3.0",
-            description="...",
-            instruction="...",
-            tools=[get_ad_data_tool],
-            before_agent_callback=transform_ad_data,
-        )
+agent = LlmAgent(
+    name="analyze_agent",
+    model="gemini-2.5-pro",
+    instruction=ANALYZE_AGENT_PROMPT,
+    tools=[get_ad_data_tool],
+)
 ```
 
 ### Controller Pattern
@@ -476,17 +834,13 @@ class AnalyzeAgentModel:
 class AgathaController(BaseController):
     async def run_analysis(self, request):
         return await self.run_agent_flow(
-            agent_name="analyze_agent",
             agent=self.analyze_agent,
             message_content=json.dumps(request.dict()),
-            initial_state={"account_id": request.account_id}
         )
 ```
 
 ### Tool Definition
 ```python
-from google.adk.tools import FunctionTool
-
 async def get_ad_data(account_id: str, days: int = 30) -> Dict:
     # Query BigQuery or Meta API
     ...
@@ -494,61 +848,26 @@ async def get_ad_data(account_id: str, days: int = 30) -> Dict:
 get_ad_data_tool = FunctionTool(func=get_ad_data)
 ```
 
-## Good/Bad Spend Logic (from brainstorm)
+---
+
+## Model Configuration
 
 ```python
-def classify_spend(ad_data, account_avg_roas):
-    roas_ratio = ad_data['roas'] / account_avg_roas
-    spend = ad_data['spend']
-    days = ad_data['days_running']
+# config/settings.py
+import os
 
-    if days < 7 or spend < 1000:
-        return "WAIT"  # Learning phase
-
-    if ad_data['roas'] == 0 and spend >= 5000:
-        return "BAD"   # Pause
-
-    if roas_ratio >= 2.0:
-        return "GOOD"  # Scale 30-100%
-    elif roas_ratio >= 1.0:
-        return "OK"    # Monitor
-    elif roas_ratio >= 0.5:
-        return "WARNING"  # Review
-    else:
-        return "BAD"   # Reduce 50%
+MODEL_CONFIG = {
+    "provider": os.getenv("AI_PROVIDER", "gemini"),  # gemini | openai
+    "gemini": {
+        "model": os.getenv("GEMINI_MODEL", "gemini-2.5-pro"),
+    },
+    "openai": {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
+    }
+}
 ```
 
-## Verification Steps
-
-1. **Backend health**: `curl http://localhost:8000/`
-2. **BigQuery connection**: Run analyze endpoint with test data
-3. **Agent flow**: Check logs for Analyze → Recommend → Execute sequence
-4. **Frontend**: Login → Dashboard → Recommendations → Execute flow
-5. **Demo dry-run**: Full E2E with stopwatch (target < 60s)
-
-## Dependencies Between Tasks (AI-First)
-
-```
-P1-1 (minimal setup)
-    │
-    └── P1-2 (mock data tool)
-           │
-           └── P1-3 (Analyze Agent) ──► GATE 1
-                  │
-                  └── P1-5 (Recommend Agent) ──► GATE 2
-                         │
-                         ├── P2-1 (BigQuery tool) ──► GATE 3
-                         │
-                         └── P3-1 (Execute Agent)
-                                │
-                                └── P3-2 (FastAPI routes)
-                                       │
-                                       └── P4-1 (Frontend)
-                                              │
-                                              └── P4-2 (Integration)
-```
-
-**Key insight:** Agents are validated with mock data BEFORE building data connectors or infrastructure. Gates ensure we don't build infra for broken AI.
+---
 
 ## Foundational Elements
 
@@ -600,7 +919,7 @@ tests/
 
 **Test Strategy:**
 - Unit tests: Mock LLM responses, test business logic
-- Integration tests: Use `AsyncMock` for agent execution (like otb-agents)
+- Integration tests: Use `AsyncMock` for agent execution
 - Fixtures: Pre-loaded test data from BigQuery exports
 
 ### Observability (OpenTelemetry + Google ADK)
@@ -626,10 +945,12 @@ def setup_observability():
 - Tool calls (BQ queries, Meta API)
 - Request/response at API level
 
-### Deployment (Cloud Run - GCP)
+---
 
+## Deployment (Cloud Run - GCP)
+
+### cloudbuild.yaml
 ```yaml
-# cloudbuild.yaml
 steps:
   # Build backend
   - name: 'gcr.io/cloud-builders/docker'
@@ -660,8 +981,9 @@ steps:
       - '--allow-unauthenticated'
 ```
 
-**Dockerfiles:**
+### Dockerfiles
 
+**Backend:**
 ```dockerfile
 # backend/Dockerfile
 FROM python:3.11-slim
@@ -672,6 +994,7 @@ COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
+**Frontend:**
 ```dockerfile
 # frontend/Dockerfile
 FROM node:20-alpine AS builder
@@ -689,7 +1012,7 @@ COPY --from=builder /app/package.json ./
 CMD ["npm", "start"]
 ```
 
-**Environment Variables (Cloud Run):**
+### Environment Variables (Cloud Run)
 - `AI_PROVIDER`: gemini | openai
 - `GEMINI_MODEL`: gemini-3.0
 - `GOOGLE_CLOUD_PROJECT`: otb-dev-platform
@@ -697,344 +1020,7 @@ CMD ["npm", "start"]
 - `META_APP_SECRET`: Meta app secret
 - `FI_PROJECT_NAME`: Observability project name
 
-## Test Fixtures (AI-First Validation)
-
-The production OTB API responses serve as **target output format** for our Analyze Agent. Our classification logic should produce similar structures.
-
-### Fixture Files
-| File | Entity | Tenant | Use |
-|------|--------|--------|-----|
-| `tl_ad_performance_prod.json` | ads | ThirdLove | Expected output format for ad analysis |
-| `wh_campaign_performance_prod.json` | campaigns | WhisperingHomes | Expected output format for campaign analysis |
-
-### Approach: Anomaly Detection + RCA (SME Validated)
-
-**Key Insight from SME:** "The goal is to find anomalies... there is no concept of leakage... it's spend RCA or CPA std deviation. The goal is to find ontology, not so much an idea of what the metrics are."
-
-Instead of fixed classification rules, Agatha uses **statistical anomaly detection** with **deep RCA** and **ontology-based exploration**.
-
-```
-Ad Data → Statistical Analysis → Anomalies Surfaced → Deep RCA → Actionable Insights
-```
-
-### Agent Tools Architecture
-
-| Tool | Purpose | When Used |
-|------|---------|-----------|
-| `detect_anomalies` | Find ads with metrics >Nσ from baseline | Initial analysis |
-| `get_ontology` | Hierarchical breakdown by dimensions | Understanding structure |
-| `run_rca` | Deep root cause analysis on anomaly | Explaining why |
-| `get_ad_data` | Fetch raw ad data from BQ/fixtures | Data retrieval |
-
-### Tool 1: Anomaly Detection
-
-```python
-async def detect_anomalies(
-    ads: List[dict],
-    metric: str,                    # "spend" | "cpa" | "roas" | "ctr" | "cvr"
-    threshold_sigma: float = 2.0,   # Standard deviations from mean
-    direction: str = "both",        # "high" | "low" | "both"
-    min_spend: float = 100,         # Minimum spend to consider
-    config: dict = ANOMALY_CONFIG
-) -> dict:
-    """
-    Find ads where metric deviates significantly from baseline.
-
-    Returns:
-        {
-            "anomalies": [
-                {
-                    "ad": {...},
-                    "metric": "cpa",
-                    "value": 45.2,
-                    "baseline": 19.1,
-                    "z_score": 2.3,
-                    "direction": "high",
-                    "severity": "significant"  # "mild" | "significant" | "extreme"
-                }
-            ],
-            "baseline_stats": {
-                "mean": 19.1,
-                "std": 11.3,
-                "median": 17.5,
-                "count": 128
-            }
-        }
-    """
-```
-
-### Tool 2: Ontology (Expanded Scope)
-
-```python
-async def get_ontology(
-    ads: List[dict],
-    group_by: List[str],            # Dimensions to group by
-    metrics: List[str] = None,      # Metrics to aggregate
-    config: dict = ONTOLOGY_CONFIG
-) -> dict:
-    """
-    Return hierarchical breakdown of ad data by dimensions.
-
-    Supported dimensions (expanded scope):
-    - "ad_provider"     # Google Ads, Facebook Ads, TikTok Ads
-    - "store"           # US, IND (market)
-    - "ad_type"         # Static, Video, Shopping, Performance Max
-    - "creative_status" # multi_variant_winner, needs_testing, fatigued
-    - "spend_tier"      # High, Medium, Low
-    - "campaign_status" # ACTIVE, PAUSED, REMOVED
-    - "performance_segment"  # winners, high_potential, underperformers, losers
-
-    Returns:
-        {
-            "breakdown": {
-                "Google Ads": {
-                    "count": 45,
-                    "total_spend": 125000,
-                    "avg_roas": 2.3,
-                    "avg_cpa": 18.5,
-                    "anomaly_count": 3
-                },
-                "Facebook Ads": {...},
-                "TikTok Ads": {...}
-            },
-            "dimensions_used": ["ad_provider"],
-            "total_ads": 128
-        }
-    """
-```
-
-### Tool 3: Deep RCA (Root Cause Analysis)
-
-```python
-async def run_rca(
-    anomaly_ad: dict,
-    all_ads: List[dict],
-    anomaly_metric: str,
-    config: dict = RCA_CONFIG
-) -> dict:
-    """
-    Deep root cause analysis for an anomalous ad.
-
-    Analysis dimensions:
-    1. Placement analysis (where is spend going?)
-    2. Audience analysis (audience_engagement_score, competitive_pressure)
-    3. Creative analysis (creative_variants, unique_creatives, creative_status)
-    4. Budget analysis (budget_utilization, daily_spend_velocity, avg_daily_budget)
-    5. Comparison to similar ads (same provider, same store, same ad_type)
-
-    Returns:
-        {
-            "anomaly_summary": {
-                "ad_name": "Floor Lamps Campaign",
-                "metric": "cpa",
-                "value": 45.2,
-                "baseline": 19.1,
-                "deviation": "+137%"
-            },
-            "root_causes": [
-                {
-                    "factor": "audience_engagement",
-                    "finding": "Audience engagement score is 12.3 vs platform avg 25.5",
-                    "impact": "high",
-                    "suggestion": "Review audience targeting"
-                },
-                {
-                    "factor": "creative_fatigue",
-                    "finding": "Single creative variant running for 45 days",
-                    "impact": "medium",
-                    "suggestion": "Test new creative variants"
-                },
-                {
-                    "factor": "competitive_pressure",
-                    "finding": "Competitive pressure 0.85 (high) vs avg 0.45",
-                    "impact": "medium",
-                    "suggestion": "Consider different auction times or placements"
-                }
-            ],
-            "comparison_to_similar": {
-                "same_provider_avg_cpa": 22.1,
-                "same_store_avg_cpa": 20.5,
-                "same_ad_type_avg_cpa": 18.9
-            },
-            "recommended_actions": [
-                "Review audience targeting settings",
-                "Add 2-3 new creative variants",
-                "Consider reducing daily budget until CPA stabilizes"
-            ]
-        }
-    """
-```
-
-### Config (Anomaly Detection)
-
-```python
-# config/anomaly_config.py
-
-ANOMALY_CONFIG = {
-    "default_threshold_sigma": 2.0,
-    "severity_levels": {
-        "mild": 1.5,       # 1.5-2σ
-        "significant": 2.0, # 2-3σ
-        "extreme": 3.0,     # >3σ
-    },
-    "metrics": {
-        "spend": {"direction": "high", "min_value": 100},
-        "cpa": {"direction": "high", "min_value": 0},
-        "roas": {"direction": "low", "min_value": 0},
-        "ctr": {"direction": "both", "min_value": 0},
-        "cvr": {"direction": "both", "min_value": 0},
-    },
-    "min_sample_size": 10,  # Minimum ads for meaningful σ calculation
-}
-
-ONTOLOGY_CONFIG = {
-    "dimensions": [
-        "ad_provider",
-        "store",
-        "ad_type",
-        "creative_status",
-        "spend_tier",
-        "campaign_status",
-        "performance_segment",
-    ],
-    "default_metrics": ["Spend", "ROAS", "CPA", "CTR"],
-}
-
-RCA_CONFIG = {
-    "analysis_dimensions": [
-        "audience_engagement_score",
-        "competitive_pressure",
-        "creative_variants",
-        "unique_creatives",
-        "creative_status",
-        "budget_utilization",
-        "daily_spend_velocity",
-        "days_active",
-        "recency",
-    ],
-    "comparison_dimensions": ["ad_provider", "store", "ad_type"],
-    "impact_thresholds": {
-        "high": 0.5,    # >50% deviation from baseline
-        "medium": 0.25, # 25-50% deviation
-        "low": 0.1,     # 10-25% deviation
-    },
-}
-```
-
-### Example Agent Flow
-
-```
-User: "Analyze my ad account for waste"
-
-Analyze Agent:
-1. get_ad_data(account_id="tl", days=30)
-2. detect_anomalies(ads, metric="cpa", direction="high")
-   → Found 5 ads with CPA >2σ above baseline
-3. detect_anomalies(ads, metric="roas", direction="low")
-   → Found 3 ads with ROAS >2σ below baseline (1 overlap)
-4. get_ontology(ads, group_by=["ad_provider"])
-   → TikTok Ads: 4 of 7 anomalies (57%)
-5. run_rca(worst_anomaly, all_ads, "cpa")
-   → Root cause: Low audience engagement + single creative
-
-Agent Response:
-"Found 7 anomalous ads representing potential waste:
-- 4 TikTok ads with CPA 2-3x higher than baseline ($45 vs $19 avg)
-- Root cause analysis shows low audience engagement and creative fatigue
-- Recommendation: Pause 'Floor Lamps TikTok' campaign, test new creatives"
-```
-
-### Anomaly Output Schema
-
-```python
-# What the Analyze Agent surfaces (not fixed classifications)
-{
-    "anomalies": [
-        {
-            "ad_id": "12345",
-            "ad_name": "Floor Lamps TikTok",
-            "anomaly_type": "high_cpa",
-            "severity": "significant",
-            "metrics": {
-                "cpa": {"value": 45.2, "baseline": 19.1, "z_score": 2.3},
-                "roas": {"value": 0.3, "baseline": 2.1, "z_score": -1.8},
-            },
-            "rca_summary": "Low audience engagement + creative fatigue",
-            "suggested_actions": ["Pause campaign", "Test new creatives"],
-            "potential_waste": 8500  # Estimated $ waste if continued
-        }
-    ],
-    "ontology_insights": {
-        "worst_provider": "TikTok Ads",
-        "worst_dimension_breakdown": {...}
-    },
-    "summary": {
-        "total_anomalies": 7,
-        "total_potential_waste": 28500,
-        "top_recommendation": "Review TikTok ad targeting"
-    }
-}
-
-### Test Strategy
-
-1. **Unit tests**: Validate anomaly detection against fixture data
-   ```python
-   def test_detect_cpa_anomalies():
-       # From tl_ad_performance_prod.json
-       ads = load_fixture("tl_ad_performance_prod.json")
-       result = detect_anomalies(ads, metric="cpa", threshold_sigma=2.0)
-       # Should find ads with z_cpa > 2.0
-       assert len(result["anomalies"]) > 0
-       for anomaly in result["anomalies"]:
-           assert abs(anomaly["z_score"]) >= 2.0
-
-   def test_ontology_by_provider():
-       ads = load_fixture("tl_ad_performance_prod.json")
-       result = get_ontology(ads, group_by=["ad_provider"])
-       assert "Google Ads" in result["breakdown"]
-       assert "total_spend" in result["breakdown"]["Google Ads"]
-
-   def test_rca_identifies_factors():
-       ads = load_fixture("tl_ad_performance_prod.json")
-       anomaly = detect_anomalies(ads, metric="cpa", direction="high")["anomalies"][0]
-       rca = run_rca(anomaly["ad"], ads, "cpa")
-       assert "root_causes" in rca
-       assert len(rca["recommended_actions"]) > 0
-   ```
-
-2. **Integration tests**: Run Analyze Agent on fixture data, verify anomalies match production z-scores
-
-3. **Golden tests**: Validate that high z_cpa ads are surfaced as anomalies
-
-### Composite Score Calculation
-
-Reverse-engineered from production API patterns:
-
-```python
-def calculate_composite_score(
-    z_roas: float,
-    z_ctr: float,
-    z_cpa: float,
-    confidence_weight: float = 1.0
-) -> float:
-    """
-    Weighted combination of z-scores.
-    Higher ROAS and CTR are good, lower CPA is good.
-    """
-    weights = {
-        "roas": 0.5,   # Revenue efficiency most important
-        "ctr": 0.3,    # Engagement signal
-        "cpa": 0.2,    # Cost efficiency (inverted)
-    }
-
-    raw_score = (
-        weights["roas"] * z_roas +
-        weights["ctr"] * z_ctr -
-        weights["cpa"] * z_cpa  # Subtract because lower CPA is better
-    )
-
-    return round(raw_score * confidence_weight, 2)
-```
+---
 
 ## Risk Mitigations
 
@@ -1046,4 +1032,46 @@ def calculate_composite_score(
 | OAuth issues | Pre-authenticate test account |
 | Cloud Run cold start | Keep backend warm with health checks |
 | Secret management | Use GCP Secret Manager |
-| Classification drift | Validate against production API fixtures |
+| LLM hallucination | Validation layer + retry logic |
+| Unexplainable decisions | CoT required in all outputs |
+
+---
+
+## Verification Checklist
+
+Before demo:
+- [ ] Analyze outputs include complete `chain_of_thought`
+- [ ] Cited metrics match source data (within tolerance)
+- [ ] Recommendations include dollar impact calculations
+- [ ] `validate_analyze_output()` catches bad data (test with fabricated metrics)
+- [ ] Few-shot examples produce sensible classifications
+- [ ] User explanations cite specific numbers
+- [ ] Edge cases handled (borderline thresholds, zero ROAS, new ads)
+- [ ] Graceful degradation works after 2 retry failures
+- [ ] Meta OAuth flow works (for demo)
+
+---
+
+## Dependencies Between Tasks
+
+```
+P1-1 (minimal setup)
+    │
+    └── P1-2 (mock data tool)
+           │
+           └── P1-3 (Analyze Agent) ──► GATE 1
+                  │
+                  └── P1-5 (Recommend Agent) ──► GATE 2
+                         │
+                         ├── P2-1 (BigQuery tool) ──► GATE 3
+                         │
+                         └── P3-1 (Execute Agent)
+                                │
+                                └── P3-2 (FastAPI routes)
+                                       │
+                                       └── P4-1 (Frontend)
+                                              │
+                                              └── P4-2 (Integration)
+```
+
+**Key insight:** Agents are validated with mock data BEFORE building data connectors or infrastructure. Gates ensure we don't build infra for broken AI.

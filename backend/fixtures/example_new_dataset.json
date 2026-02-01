@@ -1,0 +1,40 @@
+{
+  "account_avg_roas": 5.0,
+  "ads": [
+    {
+      "ad_name": "Summer Sale Campaign",
+      "ad_provider": "Facebook Ads",
+      "spend": 25000,
+      "roas": 12.5,
+      "days_active": 30
+    },
+    {
+      "ad_name": "Brand Awareness Video",
+      "ad_provider": "Google Ads",
+      "spend": 50000,
+      "roas": 2.1,
+      "days_active": 45
+    },
+    {
+      "ad_name": "New Product Launch",
+      "ad_provider": "TikTok Ads",
+      "spend": 8000,
+      "roas": 8.0,
+      "days_active": 14
+    },
+    {
+      "ad_name": "Retargeting Campaign",
+      "ad_provider": "Facebook Ads",
+      "spend": 15000,
+      "roas": 0.0,
+      "days_active": 60
+    },
+    {
+      "ad_name": "Fresh Test Ad",
+      "ad_provider": "Google Ads",
+      "spend": 500,
+      "roas": 15.0,
+      "days_active": 3
+    }
+  ]
+}

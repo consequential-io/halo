@@ -1,0 +1,121 @@
+{
+  "account_avg_roas": 6.90,
+  "total_spend": 4539972,
+  "date_range": {
+    "start": "2025-04-07",
+    "end": "2026-01-30",
+    "days": 299
+  },
+  "ads": [
+    {
+      "ad_name": "Thirdlove® Bras",
+      "ad_provider": "Google Ads",
+      "spend": 212297,
+      "roas": 29.58,
+      "days_active": 287,
+      "_expected": {
+        "classification": "GOOD",
+        "reasoning": "ROAS 29.58 is 4.3× account avg (6.90). Spend $212k and 287 days exceed thresholds."
+      }
+    },
+    {
+      "ad_name": "purchase retention DPA-catalogsales",
+      "ad_provider": "Facebook Ads",
+      "spend": 214215,
+      "roas": 6.03,
+      "days_active": 281,
+      "_expected": {
+        "classification": "WARNING",
+        "reasoning": "ROAS 6.03 is 0.87× account avg. Below 1× threshold with $214k spend."
+      }
+    },
+    {
+      "ad_name": "DPA-Catalog-AllProducts NoFrame",
+      "ad_provider": "Facebook Ads",
+      "spend": 182604,
+      "roas": 4.17,
+      "days_active": 282,
+      "_expected": {
+        "classification": "WARNING",
+        "reasoning": "ROAS 4.17 is 0.60× account avg. Below 1× threshold with $182k spend."
+      }
+    },
+    {
+      "ad_name": "video pc:bra pr:minimizer lg:15-30 an:16877A BraBl",
+      "ad_provider": "Facebook Ads",
+      "spend": 121606,
+      "roas": 3.10,
+      "days_active": 51,
+      "_expected": {
+        "classification": "BAD",
+        "reasoning": "ROAS 3.10 is 0.45× account avg (< 0.5× threshold). $121k spend qualifies for REDUCE."
+      }
+    },
+    {
+      "ad_name": "7369346196164364049 catalog carousel",
+      "ad_provider": "TikTok Ads",
+      "spend": 32646,
+      "roas": 0.00,
+      "days_active": 107,
+      "_expected": {
+        "classification": "BAD",
+        "reasoning": "Zero ROAS after $32k spend over 107 days. Clear PAUSE candidate."
+      }
+    },
+    {
+      "ad_name": "Thirdlove® 4th Of July Sale",
+      "ad_provider": "Google Ads",
+      "spend": 14242,
+      "roas": 19.71,
+      "days_active": 6,
+      "_expected": {
+        "classification": "WAIT",
+        "reasoning": "Only 6 days active (< 7 day threshold). High ROAS but needs more time."
+      }
+    },
+    {
+      "ad_name": "ThirdLove® BOGO Bra Sale",
+      "ad_provider": "Google Ads",
+      "spend": 6307,
+      "roas": 30.38,
+      "days_active": 6,
+      "_expected": {
+        "classification": "WAIT",
+        "reasoning": "Only 6 days active. Excellent ROAS but still in learning phase."
+      }
+    },
+    {
+      "ad_name": "DPA-Catalog-AllProducts 22382-D 60DReturnsExchange",
+      "ad_provider": "Facebook Ads",
+      "spend": 80978,
+      "roas": 7.76,
+      "days_active": 148,
+      "_expected": {
+        "classification": "OK",
+        "reasoning": "ROAS 7.76 is 1.12× account avg. Between 1-2× threshold = OK."
+      }
+    },
+    {
+      "ad_name": "The Best Bras You'll Own",
+      "ad_provider": "Google Ads",
+      "spend": 60626,
+      "roas": 3.26,
+      "days_active": 287,
+      "_expected": {
+        "classification": "BAD",
+        "reasoning": "ROAS 3.26 is 0.47× account avg (< 0.5×). $60k spend qualifies for REDUCE."
+      }
+    },
+    {
+      "ad_name": "id:24847-A at:image pc:mixed pr:alldaylace lg:stat",
+      "ad_provider": "Facebook Ads",
+      "spend": 1141,
+      "roas": 2.99,
+      "days_active": 6,
+      "_expected": {
+        "classification": "WAIT",
+        "reasoning": "Only 6 days and $1.1k spend. Below both thresholds for decision."
+      }
+    }
+  ]
+}
