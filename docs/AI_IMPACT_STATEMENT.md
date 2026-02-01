@@ -22,9 +22,35 @@ Agatha is a multi-agent system that analyzes advertising performance data, detec
 
 ## Hallucination/Bias Mitigations
 
-- **Rule-based thresholds:** Classification logic (GOOD/BAD/OK) uses deterministic rules, not LLM generation
-- **Source citations:** All recommendations include underlying data references
+### Chain-of-Thought Grounding
+
+The LLM must show its reasoning in a structured format that we validate against source data:
+
+```json
+{
+  "chain_of_thought": {
+    "data_extracted": {"spend": 212297, "roas": 29.58, "days": 287},
+    "comparison": {"roas_ratio": "29.58 / 6.90 = 4.3×"},
+    "qualification": {"spend_ok": true, "days_ok": true},
+    "classification_logic": {"result": "GOOD", "reason": "ROAS 4.3× above average"}
+  }
+}
+```
+
+**Validation checks:**
+- `data_extracted` values must match source input (±1% tolerance)
+- `qualification` flags verified against actual thresholds (spend ≥ $1000, days ≥ 7)
+- `classification_logic.result` must match stated classification
+- If any check fails → retry with feedback OR fallback to rule-based classification
+
+### Additional Mitigations
+
+- **Rule-based fallbacks:** If LLM output fails validation, deterministic rules generate the classification
+- **Source citations:** All recommendations include underlying data references with exact values
 - **Relative benchmarks:** ROAS thresholds are relative to account averages, avoiding industry bias
+- **Bad-only anomaly filtering:** RCA pipeline only flags negative business impacts (ROAS drops, CPA spikes), not statistical noise
+- **Timeline visualization:** Shows historical trends so users can verify anomalies are real, not data artifacts
+- **Confidence scoring:** Each recommendation tagged HIGH/MEDIUM/LOW based on data quality and pattern strength
 - **Human-in-the-loop:** All execution actions require explicit user approval
 - **Dry-run mode:** Production writes disabled during hackathon; mock execution only
 

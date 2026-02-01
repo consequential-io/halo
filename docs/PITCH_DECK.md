@@ -106,16 +106,71 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **LLM** | Gemini 2.5 Pro | Agent reasoning, recommendation generation |
-| **Framework** | Google ADK | Multi-agent orchestration |
-| **Anomaly Detection** | Rule-based + LLM | Identify ROAS deviations, zero-converters |
-| **Data Store** | BigQuery | Historical ad performance (298 days) |
+| **LLM** | Gemini 2.0 Flash | Agent reasoning, recommendation generation |
+| **Framework** | Google ADK | Multi-agent orchestration with FunctionTool |
+| **Anomaly Detection** | Z-score statistical | Detect metric deviations (threshold: 2.5σ) |
+| **RCA Agent** | LLM + 6 diagnostic tools | Root cause analysis for falling metrics |
+| **Data Store** | BigQuery | Historical ad performance (77 days) |
 | **Actions** | Meta Marketing API | Campaign modifications (dry-run) |
+
+### Agentic Tool Use (Implemented)
+
+Each agent has access to **data-fetching tools** and makes autonomous decisions:
+
+| Agent | Tools | Output |
+|-------|-------|--------|
+| **AnalyzeAgent** | `get_ad_data` | Classifies ads as GOOD/OK/WARNING/BAD/WAIT |
+| **RecommendAgent** | `get_top_performers`, `get_underperformers` | SCALE/REDUCE/PAUSE actions with $ impact |
+| **RCA Agent** | 6 diagnostic checks | Root cause + confidence + recommended action |
+
+**RCA Diagnostic Tools:**
+- `check_cpm_spike` — Auction competition analysis
+- `check_creative_fatigue` — CTR trend over time
+- `check_landing_page` — Funnel conversion metrics
+- `check_tracking` — Pixel/conversion verification
+- `check_budget_exhaustion` — Spend vs budget caps
+- `check_seasonality` — Historical comparisons (7d/30d)
+
+**Agent Decision Flow:**
+```
+Input: "CPA spiked 261%"
+  Agent decides which tool to call based on anomaly type
+  Tool returns: {spiked: true, cpm_change: 46.8%}
+  Agent interprets: "Root cause: CPM spike (auction competition)"
+  Output: Confidence HIGH, Action: Adjust bids
+```
+
+### Quick Analysis Mode (Implemented)
+
+Fast top/bottom performer identification without LLM:
+
+| Feature | Implementation |
+|---------|----------------|
+| Data source | BigQuery with weighted ROAS aggregation |
+| Filtering | CAMPAIGN_STATUS = ACTIVE, min spend threshold |
+| Output | Top performers (scale), Underperformers (pause) |
+| Speed | Seconds (no LLM latency) |
+
+### Hallucination Prevention (Implemented)
+
+**Chain-of-Thought Grounding:** LLM must show structured reasoning that we validate:
+
+```json
+{
+  "data_extracted": {"spend": 212297, "roas": 29.58},  // ← Verified against source
+  "comparison": {"roas_ratio": "4.3×"},                // ← Math checked
+  "classification": "GOOD"                              // ← Must match logic
+}
+```
+
+If validation fails → retry with feedback OR fallback to rule-based classification.
 
 ### Why This Approach
 
-- **Gemini 2.5 Pro:** Best-in-class reasoning for structured business data
-- **Google ADK:** Production-ready agent framework with tool calling
+- **Gemini 2.0 Flash:** Fast inference with native tool calling support
+- **Google ADK:** Production-ready agent framework with FunctionTool
+- **Agentic tools:** LLM decides what to check based on anomaly type
+- **Grounded reasoning:** Validate LLM output against source data to prevent hallucinations
 - **Hybrid rules + LLM:** Rules for precision, LLM for nuance and explanation
 
 ---
