@@ -4,18 +4,21 @@ substitutions:
   _FRONTEND_SERVICE: halo-frontend
   _FRONTEND_DOMAIN: adspend.consequential.io
   _BACKEND_URL: https://halo-backend-zqlsaqunba-uc.a.run.app
+  _API_TOKEN: halo-demo-token-2026
 
 steps:
   # Build backend
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/${_BACKEND_SERVICE}', './backend']
 
-  # Build frontend with backend URL
+  # Build frontend with backend URL and API token
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '--build-arg'
       - 'VITE_API_URL=${_BACKEND_URL}'
+      - '--build-arg'
+      - 'VITE_API_TOKEN=${_API_TOKEN}'
       - '-t'
       - 'gcr.io/$PROJECT_ID/${_FRONTEND_SERVICE}'
       - './frontend'
