@@ -110,9 +110,33 @@ export async function getMetaLoginUrl(): Promise<{ oauth_url: string }> {
   return response.data
 }
 
+// Slack webhook for instant alerts (frontend - no IP)
+const SLACK_WEBHOOK = 'https://hooks.slack.com/services/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'
+
 // Simple event tracking - fire and forget
 export function trackEvent(event: string): void {
-  fetch(`${API_URL}/api/track?event=${encodeURIComponent(event)}`).catch(() => {
-    // Silently fail - tracking should never break the app
-  })
+  // 1. Backend tracking (has IP, logs to Cloud Logging)
+  fetch(`${API_URL}/api/track?event=${encodeURIComponent(event)}`).catch(() => {})
+
+  // 2. Frontend Slack alert (instant, no IP)
+  const emoji: Record<string, string> = {
+    page_login: '👀',
+    login_click_demo: '🎮',
+    login_click_facebook: '📘',
+    page_analyze: '✅'
+  }
+  const device = /iPhone/.test(navigator.userAgent) ? 'iPhone'
+    : /Android/.test(navigator.userAgent) ? 'Android'
+    : /Mac/.test(navigator.userAgent) ? 'Mac'
+    : /Windows/.test(navigator.userAgent) ? 'Windows' : 'Unknown'
+  const source = document.referrer.includes('linkedin') ? 'LinkedIn'
+    : document.referrer.includes('slack') ? 'Slack'
+    : document.referrer || 'Direct'
+
+  fetch(SLACK_WEBHOOK, {
+    method: 'POST',
+    body: JSON.stringify({
+      text: `${emoji[event] || '📊'} *${event}*\n• Source: ${source}\n• Device: ${device}`
+    })
+  }).catch(() => {})
 }
